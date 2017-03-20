@@ -1,0 +1,2 @@
+export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
+source `openrave-config --share-dir`/openrave.bash
