@@ -2,12 +2,16 @@ if (CMAKE_VERSION VERSION_LESS "3.1")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
   endif ()
-else ()
-  set (CMAKE_CXX_STANDARD 11)
+  else ()
+    set (CMAKE_CXX_STANDARD 11)
+    set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 endif ()
 
+set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
+#set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+
 # install here: http://askubuntu.com/questions/610291/how-to-install-cmake-3-2-on-ubuntu-14-04
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 2.6.0)
 project(chrisplugin)
 find_package(OpenRAVE 0.9 REQUIRED)
 
