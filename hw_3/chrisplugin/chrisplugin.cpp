@@ -4,6 +4,10 @@ using namespace OpenRAVE;
 #include <algorithm>
 #include <math.h>
 #include <vector>
+#include <sstream>
+#include <string>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
 
 #include "chrisplugin.hpp"
 
@@ -29,7 +33,7 @@ public:
     /**
      * produce path in under 3 minutes
      * allow goal bias adjustments from 1-96%
-     * parse the input: [0.449, -0.201, -0.151, -0.11, 0, -0.11, 0] [ 1.  1.  1.  1.  1.  1.  1.]
+     * parse the input: [0.449,-0.201,-0.151,-0.11,0,-0.11,0][3.17104,2.75674,2.2325,1.78948,1.42903,0.809013,0.593084]
      *
      */
     bool FindPath(std::ostream& sout, std::istream& sinput){
@@ -37,8 +41,42 @@ public:
     	sinput >> input;
     	std::cout << "I got this input: " << input << std::endl;
 
+    	std::vector<std::string> arrays;
+    	boost::split(arrays, input, boost::is_any_of("["), boost::token_compress_on);
+    	std::cout << "And I parsed these arrays:" << std::endl;
+    	for (auto i = arrays.begin(); i != arrays.end(); ++i){
+    		std::cout << *i << ' ' << std::endl;
+    		printedArrayToVector(*i);
+    	}
+//    	printedArrayToVector(arrays[0]);
+//    	printedArrayToVector(arrays[1]);
     	return true;
     }
+
+    std::vector<float> printedArrayToVector(std::string input){
+    	std::cout << "I got this input: " << input << std::endl;
+    	std::vector<float> nums;
+//    	std::string::size_type sz;     // alias of size_t
+//    	std::stringstream ss(input);
+//    	float val;
+//    	while (ss >> val){
+//
+//    		nums.push_back(val);
+//    	}
+    	// http://stackoverflow.com/questions/5607589/right-way-to-split-an-stdstring-into-a-vectorstring
+    	std::vector<std::string> words;
+    	boost::split(words, input, boost::is_any_of(", []"), boost::token_compress_on);
+    	for (auto i = words.begin(); i != words.end(); ++i){
+//    	    std::cout << *i << ' ';
+//    	    nums.push_back(std::stof(*i));
+    	}
+    	return nums;
+    }
+
+private:
+    NodeTree nodeTree;
+
+
 };
 
 

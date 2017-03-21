@@ -49,7 +49,8 @@ if __name__ == "__main__":
     tuckarms(env,robot);
   
     #set start config
-    jointnames =['l_shoulder_pan_joint','l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','l_forearm_roll_joint','l_wrist_flex_joint','l_wrist_roll_joint']
+    # jointnames =['l_shoulder_pan_joint','l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','l_forearm_roll_joint','l_wrist_flex_joint','l_wrist_roll_joint']
+    jointnames =['l_shoulder_pan_joint','l_shoulder_lift_joint','l_upper_arm_roll_joint','l_elbow_flex_joint','l_forearm_roll_joint','l_wrist_flex_joint','l_wrist_roll_joint']
     robot.SetActiveDOFs([robot.GetJoint(name).GetDOFIndex() for name in jointnames])      
     # startconfig = [-0.15,0.075,-1.008,0,0,-0.11,0]
     startconfig = [-0.15,0.075,-1.008,-0.11,0,-0.11,0]
@@ -66,7 +67,10 @@ if __name__ == "__main__":
         print ChrisModule.SendCommand('help')
         print ChrisModule.SendCommand('MyCommand TrulyTruly')
 
-        activeWeights = robot.GetActiveDOFWeights()
+        # activeWeights = robot.GetActiveDOFWeights()
+        # These weights were taken from the class discussion board as both the Python and C++ API's returned
+        #  all 1's for me.
+        activeWeights = [3.17104, 2.75674, 2.2325, 1.78948, 1.42903, 0.809013, 0.593084]
 
         # send the goal with the weights, get path
         settings = ''.join([str(goalconfig), ' ', str(activeWeights)])
