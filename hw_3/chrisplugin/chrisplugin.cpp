@@ -6,8 +6,8 @@ using namespace OpenRAVE;
 #include <vector>
 #include <sstream>
 #include <string>
-#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
-#include <boost/algorithm/string/split.hpp> // Include for boost::split
+#include <boost/algorithm/string.hpp>
+
 
 #include "chrisplugin.hpp"
 
@@ -39,43 +39,59 @@ public:
     bool FindPath(std::ostream& sout, std::istream& sinput){
     	std::string input;
     	sinput >> input;
-    	std::cout << "I got this input: " << input << std::endl;
+    	std::cout << "Find Path input: " << input << std::endl;
 
     	std::vector<std::string> arrays;
-    	boost::split(arrays, input, boost::is_any_of("["), boost::token_compress_on);
-    	std::cout << "And I parsed these arrays:" << std::endl;
-    	for (auto i = arrays.begin(); i != arrays.end(); ++i){
-    		std::cout << *i << ' ' << std::endl;
-    		printedArrayToVector(*i);
+    	boost::split(arrays, input, boost::is_any_of("[]"), boost::token_compress_on);
+//    	std::cout << "And I parsed these arrays:" << std::endl;
+
+    	unsigned arrayCount = 0;
+    	for (auto array : arrays){
+//    		std::cout << "size: " << array.size() << " values: ";
+//    		std::cout << array << std::endl;
+    		if(array.size() != 0){
+    			if (arrayCount == 0){
+    				goalConfiguration = printedArrayToVector(array);
+    				arrayCount = 1;
+    			}
+    			else if(arrayCount == 1) {
+    				dofWeights = printedArrayToVector(array);
+    				arrayCount = 2;
+    			}
+    		}
     	}
-//    	printedArrayToVector(arrays[0]);
-//    	printedArrayToVector(arrays[1]);
+
+    	std::cout << std::endl << "saved goal configuration vector: " << std::endl;
+    	for (auto i = goalConfiguration.begin(); i != goalConfiguration.end(); ++i){
+    		std::cout << *i << ' ';
+    	}
+    	std::cout << std::endl << "saved dof weight vector: " << std::endl;
+    	for (auto i = dofWeights.begin(); i != dofWeights.end(); ++i){
+    		std::cout << *i << ' ';
+    	}
+    	std::cout << std::endl;
+
     	return true;
     }
 
     std::vector<float> printedArrayToVector(std::string input){
-    	std::cout << "I got this input: " << input << std::endl;
+//    	std::cout << "I got this input: " << input << std::endl;
     	std::vector<float> nums;
-//    	std::string::size_type sz;     // alias of size_t
-//    	std::stringstream ss(input);
-//    	float val;
-//    	while (ss >> val){
-//
-//    		nums.push_back(val);
-//    	}
+
     	// http://stackoverflow.com/questions/5607589/right-way-to-split-an-stdstring-into-a-vectorstring
     	std::vector<std::string> words;
     	boost::split(words, input, boost::is_any_of(", []"), boost::token_compress_on);
     	for (auto i = words.begin(); i != words.end(); ++i){
-//    	    std::cout << *i << ' ';
-//    	    nums.push_back(std::stof(*i));
+    	    std::cout << *i << ' ';
+    	    nums.emplace_back(std::stof(*i));
     	}
     	return nums;
     }
 
 private:
     NodeTree nodeTree;
-
+    std::vector<float> goalConfiguration;
+    std::vector<float> dofWeights;
 
 };
 

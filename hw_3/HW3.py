@@ -64,8 +64,8 @@ if __name__ == "__main__":
 
         ### YOUR CODE HERE ###
         ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
-        print ChrisModule.SendCommand('help')
-        print ChrisModule.SendCommand('MyCommand TrulyTruly')
+        # print ChrisModule.SendCommand('help')
+        # print ChrisModule.SendCommand('MyCommand TrulyTruly')
 
         # activeWeights = robot.GetActiveDOFWeights()
         # These weights were taken from the class discussion board as both the Python and C++ API's returned
