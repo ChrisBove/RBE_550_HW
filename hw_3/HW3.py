@@ -76,7 +76,7 @@ if __name__ == "__main__":
         settings = ''.join([str(goalconfig), ' ', str(activeWeights)])
         trimmedSettings = settings.replace(" ", "")
         string = ''.join(['FindPath ', trimmedSettings])
-        print string
+        # print string
         path = ChrisModule.SendCommand(string)
         # print the computation time
 

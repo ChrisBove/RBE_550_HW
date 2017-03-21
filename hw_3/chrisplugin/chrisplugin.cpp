@@ -37,13 +37,19 @@ public:
      *
      */
     bool FindPath(std::ostream& sout, std::istream& sinput){
+    	parseArguments(sinput);
+
+    	return true;
+    }
+
+    void parseArguments(std::istream& sinput){
     	std::string input;
     	sinput >> input;
     	std::cout << "Find Path input: " << input << std::endl;
 
     	std::vector<std::string> arrays;
     	boost::split(arrays, input, boost::is_any_of("[]"), boost::token_compress_on);
-//    	std::cout << "And I parsed these arrays:" << std::endl;
+//		std::cout << "And I parsed these arrays:" << std::endl;
 
     	unsigned arrayCount = 0;
     	for (auto array : arrays){
@@ -69,9 +75,7 @@ public:
     	for (auto i = dofWeights.begin(); i != dofWeights.end(); ++i){
     		std::cout << *i << ' ';
     	}
-    	std::cout << std::endl;
-
-    	return true;
+    	std::cout << std::endl << std::endl;
     }
 
     std::vector<float> printedArrayToVector(std::string input){
@@ -82,7 +86,7 @@ public:
     	std::vector<std::string> words;
     	boost::split(words, input, boost::is_any_of(", []"), boost::token_compress_on);
     	for (auto i = words.begin(); i != words.end(); ++i){
-    	    std::cout << *i << ' ';
+//    	    std::cout << *i << ' ';
     	    nums.emplace_back(std::stof(*i));
     	}
     	return nums;
