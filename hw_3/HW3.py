@@ -39,7 +39,9 @@ if __name__ == "__main__":
     robot = env.GetRobots()[0]
 
     ### INITIALIZE YOUR PLUGIN HERE ###
-
+    RaveInitialize()
+    RaveLoadPlugin('chrisplugin/build/chrisplugin')
+    ChrisModule = RaveCreateModule(env,'ChrisModule')
     ### END INITIALIZING YOUR PLUGIN ###
    
 
@@ -49,19 +51,41 @@ if __name__ == "__main__":
     #set start config
     jointnames =['l_shoulder_pan_joint','l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','l_forearm_roll_joint','l_wrist_flex_joint','l_wrist_roll_joint']
     robot.SetActiveDOFs([robot.GetJoint(name).GetDOFIndex() for name in jointnames])      
-    startconfig = [-0.15,0.075,-1.008,0,0,-0.11,0]
+    # startconfig = [-0.15,0.075,-1.008,0,0,-0.11,0]
+    startconfig = [-0.15,0.075,-1.008,-0.11,0,-0.11,0]
     robot.SetActiveDOFValues(startconfig);
     robot.GetController().SetDesired(robot.GetDOFValues());
     waitrobot(robot)
 
     with env:
-        goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]
+        # goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]
+        goalconfig = [0.449,-0.201,-0.151,-0.11,0,-0.11,0]
 
         ### YOUR CODE HERE ###
         ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
- 
+        print ChrisModule.SendCommand('help')
+        print ChrisModule.SendCommand('MyCommand TrulyTruly')
+
+        activeWeights = robot.GetActiveDOFWeights()
+
+        # send the goal with the weights, get path
+        settings = ''.join([str(goalconfig), ' ', str(activeWeights)])
+        trimmedSettings = settings.replace(" ", "")
+        string = ''.join(['FindPath ', trimmedSettings])
+        print string
+        path = ChrisModule.SendCommand(string)
+        # print the computation time
+
+        # draw position of left end effector in red points
+
+        # convert path to trajectory, execute on Robot
+
+        # smooth the path, 200 iterations, use this to send to robot
+
+        # show the smoothed path in blue, record path length
+
         ### END OF YOUR CODE ###
     waitrobot(robot)
 
     raw_input("Press enter to exit...")
-
+    RaveDestroy()

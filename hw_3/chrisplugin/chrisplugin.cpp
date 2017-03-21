@@ -13,6 +13,8 @@ public:
     ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
         RegisterCommand("MyCommand",boost::bind(&ChrisModule::MyCommand,this,_1,_2),
                         "This is an example command");
+        RegisterCommand("FindPath",boost::bind(&ChrisModule::FindPath,this,_1,_2),
+                                "This uses RRT to find a path to the given goal");
     }
     virtual ~ChrisModule() {}
     
@@ -22,6 +24,20 @@ public:
         sinput >> input;
         sout << "output";
         return true;
+    }
+
+    /**
+     * produce path in under 3 minutes
+     * allow goal bias adjustments from 1-96%
+     * parse the input: [0.449, -0.201, -0.151, -0.11, 0, -0.11, 0] [ 1.  1.  1.  1.  1.  1.  1.]
+     *
+     */
+    bool FindPath(std::ostream& sout, std::istream& sinput){
+    	std::string input;
+    	sinput >> input;
+    	std::cout << "I got this input: " << input << std::endl;
+
+    	return true;
     }
 };
 
@@ -139,3 +155,4 @@ float NodeTree::weightedEuclidDistance(std::vector<float> configuration1, std::v
     }
     return sqrt(sum);
 }
+
