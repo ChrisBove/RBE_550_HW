@@ -38,6 +38,18 @@ public:
      */
     bool FindPath(std::ostream& sout, std::istream& sinput){
     	parseArguments(sinput);
+    	// now we have our weight and goal vector
+
+    	// obtain starting configuration
+
+    	// create first node and add it to the tree
+//    	nodeTree.addNode()
+
+    	// randomly sample from c-space
+
+    	// find nearest neighbor
+
+    	// extend - try to connect to tree
 
     	return true;
     }
@@ -149,6 +161,10 @@ NodeTree::NodeTree(){
 
 void NodeTree::addNode(RRTNode* node){
     _nodes.push_back(node);
+}
+
+void NodeTree::addNode(std::vector<float> configuration, RRTNode* parent){
+    _nodes.emplace_back(configuration, parent); // faster, allocates in place
 }
 
 void NodeTree::deleteNode(unsigned index){
