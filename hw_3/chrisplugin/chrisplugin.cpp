@@ -107,6 +107,7 @@ public:
     		extend(qRand, nearestNode);
 
     	}
+    	isColliding(&startingConfig);
     	return true;
     }
 
