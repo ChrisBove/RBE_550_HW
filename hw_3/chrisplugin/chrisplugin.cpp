@@ -16,10 +16,10 @@ class ChrisModule : public ModuleBase
 {
 private:
     NodeTree nodeTree;
-    std::vector<float> goalConfiguration;
-    std::vector<float> dofWeights;
-    std::vector<float> dofLimUpper;
-    std::vector<float> dofLimLower;
+    std::vector<double> goalConfiguration;
+    std::vector<double> dofWeights;
+    std::vector<double> dofLimUpper;
+    std::vector<double> dofLimLower;
     RobotBasePtr robot;
 
 public:
@@ -54,20 +54,15 @@ public:
     	GetEnv()->GetRobots(robots);
     	robot = robots[0];
 
-    	std::vector<double> dJointVals;
-    	robot.get()->GetActiveDOFValues(dJointVals);
-    	std::vector<float> jointVals(dJointVals.begin(), dJointVals.end());
+    	std::vector<double> startingConfig;
+    	robot.get()->GetActiveDOFValues(startingConfig);
 
     	// create first node and add it to the tree
-    	nodeTree.addNode(jointVals, NULL);
+    	nodeTree.addNode(startingConfig, NULL);
 
     	// save joint limits
-    	std::vector<double> dUpperLim, dLowerLim;
-    	robot.get()->GetActiveDOFLimits(dLowerLim, dUpperLim);
-    	std::vector<float> tempLimLower(dLowerLim.begin(), dLowerLim.end());
-    	dofLimLower = tempLimLower;
-    	std::vector<float> tempLimUpper(dUpperLim.begin(), dUpperLim.end());
-    	dofLimUpper = tempLimUpper;
+    	robot.get()->GetActiveDOFLimits(dofLimLower, dofLimUpper);
+
     	std::cout << std::endl << "saved lower joint limits: " << std::endl;
     	for (auto i = dofLimLower.begin(); i != dofLimLower.end(); ++i){
     		std::cout << *i << ' ';
@@ -80,7 +75,7 @@ public:
 
     	for (unsigned k = 0; k < 2000; k++){
     		// sample randomly from c-space
-    		std::vector<float> qRand;
+    		std::vector<double> qRand;
     		getRandomConfig(&qRand);
 
 //    		std::cout << std::endl << "a random joint value: " << std::endl;
@@ -91,7 +86,6 @@ public:
 
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
-
 
     		// extend - try to connect to tree
     		extend(qRand, nearestNode);
@@ -136,21 +130,21 @@ public:
     	std::cout << std::endl << std::endl;
     }
 
-    std::vector<float> printedArrayToVector(std::string input){
+    std::vector<double> printedArrayToVector(std::string input){
 //    	std::cout << "I got this input: " << input << std::endl;
-    	std::vector<float> nums;
+    	std::vector<double> nums;
 
     	// http://stackoverflow.com/questions/5607589/right-way-to-split-an-stdstring-into-a-vectorstring
     	std::vector<std::string> words;
     	boost::split(words, input, boost::is_any_of(", []"), boost::token_compress_on);
     	for (auto i = words.begin(); i != words.end(); ++i){
 //    	    std::cout << *i << ' ';
-    	    nums.emplace_back(std::stof(*i));
+    	    nums.emplace_back(std::stod(*i));
     	}
     	return nums;
     }
 
-    void getRandomConfig(std::vector<float>* config){
+    void getRandomConfig(std::vector<double>* config){
     	// random help from http://stackoverflow.com/questions/686353/c-random-float-number-generation
     	// seed rand
     	std::srand(static_cast <unsigned> (time(0)));
@@ -162,12 +156,12 @@ public:
     	}
     }
 
-    bool isColliding(std::vector<float>* config){
-//    	robot.get()->SetActiveDOFValues(*config);
+    bool isColliding(std::vector<double>* config){
+    	robot.get()->SetActiveDOFValues(*config);
     	return GetEnv()->CheckCollision(robot);
     }
 
-    bool extend(std::vector<float> config, RRTNode* nearest){
+    bool extend(std::vector<double> config, RRTNode* nearest){
     	// try to step towards the configuration, avoiding collisions
 
 
@@ -198,7 +192,7 @@ OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
 }
 
-RRTNode::RRTNode(std::vector<float> configuration, RRTNode* parent){
+RRTNode::RRTNode(std::vector<double> configuration, RRTNode* parent){
     _configuration = configuration;
     _parent = parent;
 }
@@ -207,7 +201,7 @@ RRTNode* RRTNode::getParent(){
     return _parent;
 }
 
-std::vector<float> RRTNode::getConfiguration(){
+std::vector<double> RRTNode::getConfiguration(){
     return _configuration;
 }
 
@@ -215,7 +209,7 @@ void RRTNode::setParent(RRTNode* node){
     _parent = node;
 }
 
-void RRTNode::setConfiguration(std::vector<float> configuration){
+void RRTNode::setConfiguration(std::vector<double> configuration){
     _configuration = configuration;
 }
 
@@ -227,7 +221,7 @@ void NodeTree::addNode(RRTNode* node){
     _nodes.push_back(node);
 }
 
-void NodeTree::addNode(std::vector<float> configuration, RRTNode* parent){
+void NodeTree::addNode(std::vector<double> configuration, RRTNode* parent){
 //	std::vector<float> config = configuration;
 //	RRTNode* par = parent;
 	_nodes.push_back(new RRTNode(configuration, parent));
@@ -274,7 +268,7 @@ struct costComparitor{
 };
 
 //naive method - search all nodes for closest weighted neighbor
-RRTNode* NodeTree::nearestNeighbor(std::vector<float> configuration, std::vector<float> weights){
+RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vector<double> weights){
     std::vector<HeapableRRTNode> neighbors;
     neighbors.reserve(_nodes.size()); // preallocate number of elements
 
@@ -289,8 +283,8 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<float> configuration, std::vector
     
 }
 
-float NodeTree::weightedEuclidDistance(std::vector<float> configuration1, std::vector<float> configuration2, std::vector<float> weights){
-    float sum = 0;
+float NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){
+    double sum = 0;
     for(unsigned i = 0; i < configuration1.size(); i++){
         sum += pow(weights[i]*(configuration1[i] - configuration2[i]),2);
     }

@@ -6,15 +6,15 @@ using namespace OpenRAVE;
 class RRTNode
 {
 public:
-	RRTNode(std::vector<float> configuration, RRTNode* parent);
+	RRTNode(std::vector<double> configuration, RRTNode* parent);
 	RRTNode* getParent();
 	void setParent(RRTNode* node);
-	std::vector<float> getConfiguration();
-	void setConfiguration(std::vector<float> configuration);
+	std::vector<double> getConfiguration();
+	void setConfiguration(std::vector<double> configuration);
 
 
 private:
-	std::vector<float> _configuration;
+	std::vector<double> _configuration;
 	RRTNode* _parent;
 };
 
@@ -36,16 +36,16 @@ class NodeTree
 public:
 	NodeTree();
 	void addNode(RRTNode* node);
-	void addNode(std::vector<float> configuration, RRTNode* parent);
+	void addNode(std::vector<double> configuration, RRTNode* parent);
 	void deleteNode(unsigned node);
 	RRTNode* getNode(unsigned index);
 	std::vector<RRTNode*> getPath(unsigned index);
 
-	RRTNode* nearestNeighbor(std::vector<float> configuration, std::vector<float> weights);
+	RRTNode* nearestNeighbor(std::vector<double> configuration, std::vector<double> weights);
 
 private:
 	std::vector<RRTNode*> _nodes;
 
-	float weightedEuclidDistance(std::vector<float> configuration1, std::vector<float> configuration2, std::vector<float> weights);
+	float weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights);
 
 };
