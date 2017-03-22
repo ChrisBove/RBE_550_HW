@@ -69,6 +69,11 @@ public:
     		return false;
     	}
 
+    	if(isColliding(&goalConfiguration)){
+    		std::cout << "ERROR: GOAL CONFIGURATION IN COLLISION STATE. ABORT." << std::endl;
+    		return false;
+    	}
+
     	// create first node and add it to the tree
     	nodeTree.addNode(startingConfig, NULL);
 

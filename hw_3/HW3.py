@@ -61,8 +61,9 @@ if __name__ == "__main__":
 
     with env:
         # goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]
-        goalconfig = [0.449,-0.201,-0.151,-0.11,0,-0.11,0]
-
+        # goalconfig = [0.449,-0.201,-0.151,-0.11,0,-0.11,0]
+        goalconfig = [0.449,-0.201,-0.11,-0.151,0,-0.11,0]
+        
         ### YOUR CODE HERE ###
         ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
         # print ChrisModule.SendCommand('help')
