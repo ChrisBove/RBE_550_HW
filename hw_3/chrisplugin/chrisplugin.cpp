@@ -10,6 +10,7 @@ using namespace OpenRAVE;
 #include <cstdlib>
 #include <random>
 #include <ctime>
+#include <eigen3/Eigen/Core>
 
 
 #include "chrisplugin.hpp"
@@ -23,6 +24,8 @@ private:
     std::vector<double> dofLimUpper;
     std::vector<double> dofLimLower;
     RobotBasePtr robot;
+
+    const double stepSize = 0.05;
 
     // http://stackoverflow.com/questions/14638739/generating-a-random-double-between-a-range-of-values
     //Mersenne Twister: Good quality random number generator
@@ -117,6 +120,12 @@ public:
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
 
+    		std::cout << std::endl << "nearest neighbor joint value: " << std::endl;
+    		for (auto i = nearestNode->getConfiguration().begin(); i != nearestNode->getConfiguration().end(); ++i){
+    			std::cout << *i << ' ';
+    		}
+    		std::cout << std::endl << std::endl;
+
     		// connect - try to connect to tree
     		ExtendCodes code = connect(qRand, nearestNode);
     		if(code != ExtendCodes::Trapped){
@@ -209,9 +218,61 @@ public:
     }
 
     ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
+    	if (configsClose(config, nearest->getConfiguration())){
+    		std::cout << "This node was too close to nearest - same thing" << std::endl;
+    		return ExtendCodes::Trapped;
+    	}
     	// try to step towards the configuration, avoiding collisions
+    	std::vector<double> vNear = nearest->getConfiguration();
+    	// calculate vector between config and nearest
+    	Eigen::VectorXd vector(7);
+    	vector << (config[0]-vNear[0]),(config[1]-vNear[1]),(config[2]-vNear[2]),(config[3]-vNear[3]),(config[4]-vNear[4]),(config[5]-vNear[5]),(config[6]-vNear[6]);
+    	Eigen::VectorXd normalized = vector/vector.norm();
 
+    	bool done = false;
+    	unsigned stepCount = 1;
+    	RRTNode* parent = nearest;
+    	while(!done){
+    		Eigen::VectorXd desired(7);
+    		desired = (stepSize*stepCount)*normalized;
+    		std::vector<double> desiredConfig = eigenVectorToV(desired);
+
+    		// if not in a collision
+    		if(!isColliding(&desiredConfig)){
+    			// add this node to the tree, set parent to the new node
+    			parent = nodeTree.addNode(desiredConfig, parent);
+
+    			// if this is the goal, yaay!
+    			if(configsClose(goalConfiguration, desiredConfig)){
+    				return ExtendCodes::Reached;
+    			}
+    			// if reached, report back
+    			if(configsClose(config, desiredConfig)){
+    				return ExtendCodes::Advanced;
+    			}
+    		}
+    		else{
+    			// we're done here - we are trapped
+    			done = true;
+    		}
+    	}
     	return ExtendCodes::Trapped;
+    }
+
+    std::vector<double> eigenVectorToV(Eigen::VectorXd eVect){
+    	std::vector<double> vector;
+    	for(unsigned i = 0; i < 7; i++) {
+    		vector.push_back(eVect[i]);
+    	}
+    	return vector;
+    }
+
+    bool configsClose(std::vector<double> config1, std::vector<double> config2){
+    	for (unsigned i = 0; i < config1.size(); i++){
+    		if(std::abs(config1[i] - config2[i]) > 0.01)
+    			return false;
+    	}
+    	return true;
     }
 
 };
@@ -268,11 +329,12 @@ void NodeTree::addNode(RRTNode* node){
     _nodes.push_back(node);
 }
 
-void NodeTree::addNode(std::vector<double> configuration, RRTNode* parent){
+RRTNode* NodeTree::addNode(std::vector<double> configuration, RRTNode* parent){
 //	std::vector<float> config = configuration;
 //	RRTNode* par = parent;
 	_nodes.push_back(new RRTNode(configuration, parent));
 //    _nodes.emplace_back(config, par); // faster, allocates in place
+	return _nodes.front();
 }
 
 void NodeTree::deleteNode(unsigned index){
@@ -325,23 +387,26 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
     neighbors.reserve(_nodes.size()); // preallocate number of elements
 
     // compute distances from this configuration to the neighbors we have
-//    unsigned count = 0;
-    double lowestDistance = 9999;
+    unsigned count = 0;
+    double lowestDistance = weightedEuclidDistance(_nodes.front()->getConfiguration(),configuration,weights);
+    RRTNode* closestNode = _nodes.front();
     for (RRTNode* node : _nodes){
     	double dist = weightedEuclidDistance(node->getConfiguration(),configuration,weights);
+//    	std::cout << "Dist: " << dist << std::endl;
     	// only add nodes that have a chance of being lower
     	if (dist < lowestDistance){
-    		neighbors.emplace_back(node, dist);
+//    		neighbors.emplace_back(node, dist);
     		lowestDistance = dist;
+    		closestNode = node;
     	}
-//    	count++;
+    	count++;
     }
-//    std::cout << "Counted " << count << " neighbors." << std::endl;
+    std::cout << "Counted " << count << " neighbors." << std::endl;
 //    // heap them so that the shortest is at the top
-    std::make_heap(neighbors.begin(), neighbors.end(), costComparitor());
+//    std::make_heap(neighbors.begin(), neighbors.end(), costComparitor());
     // pick the one at the top
-    return neighbors.front().getRRTNode();
-    
+//    return neighbors.front().getRRTNode();
+    return closestNode;
 }
 
 double NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){

@@ -36,7 +36,7 @@ class NodeTree
 public:
 	NodeTree();
 	void addNode(RRTNode* node);
-	void addNode(std::vector<double> configuration, RRTNode* parent);
+	RRTNode* addNode(std::vector<double> configuration, RRTNode* parent);
 	void deleteNode(unsigned node);
 	RRTNode* getNode(unsigned index);
 	std::vector<RRTNode*> getPath(unsigned index);
