@@ -169,9 +169,15 @@ public:
     }
 
     void getRandomConfig(std::vector<double>* config){
-    	// for each joint, pick a random number between the limits
-    	for (unsigned i = 0; i < dofLimLower.size(); i++){
-    		config->push_back(distributions[i](rng));
+    	bool successful = false;
+    	while(!successful){
+    		config->clear();
+    		// for each joint, pick a random number between the limits
+    		for (unsigned i = 0; i < dofLimLower.size(); i++){
+    			config->push_back(distributions[i](rng));
+    		}
+    		if(!isColliding(config))
+    			successful = true;
     	}
     }
 
