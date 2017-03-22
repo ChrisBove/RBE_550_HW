@@ -85,7 +85,7 @@ public:
     	rng.seed(std::random_device{}());
     	generateDistributions();
 
-    	for (unsigned k = 0; k < 1; k++){
+    	for (unsigned k = 0; k < 2000; k++){
     		// sample randomly from c-space
     		std::vector<double> qRand;
     		getRandomConfig(&qRand);
@@ -100,7 +100,7 @@ public:
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
 //
 //    		// extend - try to connect to tree
-//    		extend(qRand, nearestNode);
+    		extend(qRand, nearestNode);
 
     	}
     	return true;
@@ -267,6 +267,11 @@ std::vector<RRTNode*> NodeTree::getPath(unsigned index){
     return path;
 }
 
+HeapableRRTNode::HeapableRRTNode(RRTNode* node, double cost){
+	_cost = cost;
+	_node = node;
+}
+
 double HeapableRRTNode::getCost(){
 	return _cost;
 }
@@ -288,10 +293,13 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
     neighbors.reserve(_nodes.size()); // preallocate number of elements
 
     // compute distances from this configuration to the neighbors we have
+//    unsigned count = 0;
     for (RRTNode* node : _nodes){
     	neighbors.emplace_back(node, weightedEuclidDistance(node->getConfiguration(),configuration,weights));
+//    	count++;
     }
-    // heap them so that the shortest is at the top
+//    std::cout << "Counted " << count << " neighbors." << std::endl;
+//    // heap them so that the shortest is at the top
     std::make_heap(neighbors.begin(), neighbors.end(), costComparitor());
     // pick the one at the top
     return neighbors.front().getRRTNode();
