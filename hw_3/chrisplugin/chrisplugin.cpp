@@ -304,8 +304,14 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
 
     // compute distances from this configuration to the neighbors we have
 //    unsigned count = 0;
+    double lowestDistance = 9999;
     for (RRTNode* node : _nodes){
-    	neighbors.emplace_back(node, weightedEuclidDistance(node->getConfiguration(),configuration,weights));
+    	double dist = weightedEuclidDistance(node->getConfiguration(),configuration,weights);
+    	// only add nodes that have a chance of being lower
+    	if (dist < lowestDistance){
+    		neighbors.emplace_back(node, dist);
+    		lowestDistance = dist;
+    	}
 //    	count++;
     }
 //    std::cout << "Counted " << count << " neighbors." << std::endl;
