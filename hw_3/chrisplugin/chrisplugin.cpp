@@ -7,6 +7,7 @@ using namespace OpenRAVE;
 #include <sstream>
 #include <string>
 #include <boost/algorithm/string.hpp>
+#include <cstdlib>
 
 
 #include "chrisplugin.hpp"
@@ -19,6 +20,7 @@ private:
     std::vector<float> dofWeights;
     std::vector<float> dofLimUpper;
     std::vector<float> dofLimLower;
+    RobotBasePtr robot;
 
 public:
     ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
@@ -50,7 +52,7 @@ public:
     	// obtain starting configuration
     	std::vector<RobotBasePtr> robots;
     	GetEnv()->GetRobots(robots);
-    	RobotBasePtr robot = robots[0];
+    	robot = robots[0];
 
     	std::vector<double> dJointVals;
     	robot.get()->GetActiveDOFValues(dJointVals);
@@ -76,12 +78,25 @@ public:
     	}
     	std::cout << std::endl << std::endl;
 
-    	// sample randomly from c-space
+    	for (unsigned k = 0; k < 2000; k++){
+    		// sample randomly from c-space
+    		std::vector<float> qRand;
+    		getRandomConfig(&qRand);
 
-    	// find nearest neighbor
+//    		std::cout << std::endl << "a random joint value: " << std::endl;
+//    		for (auto i = qRand.begin(); i != qRand.end(); ++i){
+//    			std::cout << *i << ' ';
+//    		}
+//    		std::cout << std::endl << std::endl;
 
-    	// extend - try to connect to tree
+    		// find nearest neighbor
+    		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
 
+
+    		// extend - try to connect to tree
+    		extend(qRand, nearestNode);
+
+    	}
     	return true;
     }
 
@@ -133,6 +148,29 @@ public:
     	    nums.emplace_back(std::stof(*i));
     	}
     	return nums;
+    }
+
+    void getRandomConfig(std::vector<float>* config){
+    	// random help from http://stackoverflow.com/questions/686353/c-random-float-number-generation
+    	// seed rand
+    	std::srand(static_cast <unsigned> (time(0)));
+
+    	// for each joint, pick a random number between the limits
+    	for (unsigned i = 0; i < dofLimLower.size(); i++){
+    		float r3 = dofLimLower[i] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(dofLimUpper[i]-dofLimLower[i])));
+    		config->push_back(r3);
+    	}
+    }
+
+    bool isColliding(std::vector<float>* config){
+//    	robot.get()->SetActiveDOFValues(*config);
+    	return GetEnv()->CheckCollision(robot);
+    }
+
+    bool extend(std::vector<float> config, RRTNode* nearest){
+    	// try to step towards the configuration, avoiding collisions
+
+
     }
 
 };
