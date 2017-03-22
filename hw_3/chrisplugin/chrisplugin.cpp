@@ -63,6 +63,10 @@ public:
 
     	std::vector<double> startingConfig;
     	robot.get()->GetActiveDOFValues(startingConfig);
+    	if(isColliding(&startingConfig)){
+    		std::cout << "ERROR: ROBOT IS ALREADY IN COLLISION STATE. ABORT." << std::endl;
+    		return false;
+    	}
 
     	// create first node and add it to the tree
     	nodeTree.addNode(startingConfig, NULL);
