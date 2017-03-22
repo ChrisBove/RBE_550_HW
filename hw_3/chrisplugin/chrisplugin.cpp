@@ -47,6 +47,8 @@ public:
         return true;
     }
 
+    enum ExtendCodes { Reached, Trapped, Advanced};
+
     /**
      * produce path in under 3 minutes
      * allow goal bias adjustments from 1-96%
@@ -114,9 +116,16 @@ public:
 
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
-//
-//    		// extend - try to connect to tree
-    		extend(qRand, nearestNode);
+
+    		// connect - try to connect to tree
+    		ExtendCodes code = connect(qRand, nearestNode);
+    		if(code != ExtendCodes::Trapped){
+    			if(code == ExtendCodes::Reached){
+    				// return the path to the goal
+    				// TODO do the path thing
+    			}
+    		}
+    		// for bi-directional, this is where we switch which tree we grow
 
     	}
     	isColliding(&startingConfig);
@@ -199,10 +208,10 @@ public:
     	return GetEnv()->CheckCollision(robot);
     }
 
-    bool extend(std::vector<double> config, RRTNode* nearest){
+    ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
     	// try to step towards the configuration, avoiding collisions
 
-
+    	return ExtendCodes::Trapped;
     }
 
 };
