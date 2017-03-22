@@ -28,9 +28,10 @@ private:
     //Mersenne Twister: Good quality random number generator
     std::mt19937 rng;
     std::vector<std::uniform_real_distribution<double>> distributions;
+    std::uniform_real_distribution<double> zeroToOneDist;
 
 public:
-    ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
+    ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv), zeroToOneDist(0,1) {
         RegisterCommand("MyCommand",boost::bind(&ChrisModule::MyCommand,this,_1,_2),
                         "This is an example command");
         RegisterCommand("FindPath",boost::bind(&ChrisModule::FindPath,this,_1,_2),
@@ -90,10 +91,16 @@ public:
     	generateDistributions();
 
     	for (unsigned k = 0; k < 2000; k++){
-    		// sample randomly from c-space
     		std::vector<double> qRand;
-    		getRandomConfig(&qRand);
 
+    		// is it bias time?
+    		if(zeroToOneDist(rng) <= 0.01) {
+    			qRand = goalConfiguration;
+    		}
+    		else{
+    			// sample randomly from c-space
+    			getRandomConfig(&qRand);
+    		}
 //    		std::cout << std::endl << "a random joint value: " << std::endl;
 //    		for (auto i = qRand.begin(); i != qRand.end(); ++i){
 //    			std::cout << *i << ' ';
