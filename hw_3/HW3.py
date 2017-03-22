@@ -87,6 +87,10 @@ if __name__ == "__main__":
         # smooth the path, 200 iterations, use this to send to robot
 
         # show the smoothed path in blue, record path length
+        # path smoothing - start with start node - iterate through the nodes, starting with
+        # the goal node, and try to directly extend to each one. If possible without striking obstacles,
+        # then make that reachable node's parent this node
+        # rebuild the path, and keep iterating
 
         ### END OF YOUR CODE ###
     waitrobot(robot)
