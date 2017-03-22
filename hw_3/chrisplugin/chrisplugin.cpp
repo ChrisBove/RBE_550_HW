@@ -8,6 +8,8 @@ using namespace OpenRAVE;
 #include <string>
 #include <boost/algorithm/string.hpp>
 #include <cstdlib>
+#include <random>
+#include <ctime>
 
 
 #include "chrisplugin.hpp"
@@ -21,6 +23,11 @@ private:
     std::vector<double> dofLimUpper;
     std::vector<double> dofLimLower;
     RobotBasePtr robot;
+
+    // http://stackoverflow.com/questions/14638739/generating-a-random-double-between-a-range-of-values
+    //Mersenne Twister: Good quality random number generator
+    std::mt19937 rng;
+    std::vector<std::uniform_real_distribution<double>> distributions;
 
 public:
     ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
@@ -73,7 +80,12 @@ public:
     	}
     	std::cout << std::endl << std::endl;
 
-    	for (unsigned k = 0; k < 2000; k++){
+    	// generate random uniform distributions from http://stackoverflow.com/questions/14638739/generating-a-random-double-between-a-range-of-values
+    	//Initialize with non-deterministic seeds
+    	rng.seed(std::random_device{}());
+    	generateDistributions();
+
+    	for (unsigned k = 0; k < 1; k++){
     		// sample randomly from c-space
     		std::vector<double> qRand;
     		getRandomConfig(&qRand);
@@ -86,9 +98,9 @@ public:
 
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
-
-    		// extend - try to connect to tree
-    		extend(qRand, nearestNode);
+//
+//    		// extend - try to connect to tree
+//    		extend(qRand, nearestNode);
 
     	}
     	return true;
@@ -144,15 +156,18 @@ public:
     	return nums;
     }
 
-    void getRandomConfig(std::vector<double>* config){
-    	// random help from http://stackoverflow.com/questions/686353/c-random-float-number-generation
-    	// seed rand
-    	std::srand(static_cast <unsigned> (time(0)));
+    void generateDistributions(){
+    	// for each joint, generate the distribution
+    	for (unsigned i = 0; i < dofLimLower.size(); i++){
+    		std::uniform_real_distribution<double> dist(dofLimLower[i], dofLimUpper[i]);
+    		distributions.push_back(dist);
+    	}
+    }
 
+    void getRandomConfig(std::vector<double>* config){
     	// for each joint, pick a random number between the limits
     	for (unsigned i = 0; i < dofLimLower.size(); i++){
-    		float r3 = dofLimLower[i] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(dofLimUpper[i]-dofLimLower[i])));
-    		config->push_back(r3);
+    		config->push_back(distributions[i](rng));
     	}
     }
 
@@ -252,7 +267,7 @@ std::vector<RRTNode*> NodeTree::getPath(unsigned index){
     return path;
 }
 
-float HeapableRRTNode::getCost(){
+double HeapableRRTNode::getCost(){
 	return _cost;
 }
 
@@ -283,7 +298,7 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
     
 }
 
-float NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){
+double NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){
     double sum = 0;
     for(unsigned i = 0; i < configuration1.size(); i++){
         sum += pow(weights[i]*(configuration1[i] - configuration2[i]),2);

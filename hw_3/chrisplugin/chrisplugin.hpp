@@ -20,10 +20,10 @@ private:
 
 class HeapableRRTNode{
 public:
-	HeapableRRTNode(RRTNode* node, float cost);
-	float getCost();
+	HeapableRRTNode(RRTNode* node, double cost);
+	double getCost();
 	RRTNode* getRRTNode();
-	float _cost;
+	double _cost;
 private:
 	RRTNode* _node;
 
@@ -46,6 +46,6 @@ public:
 private:
 	std::vector<RRTNode*> _nodes;
 
-	float weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights);
+	double weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights);
 
 };
