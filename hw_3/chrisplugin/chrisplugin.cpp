@@ -13,6 +13,13 @@ using namespace OpenRAVE;
 
 class ChrisModule : public ModuleBase
 {
+private:
+    NodeTree nodeTree;
+    std::vector<float> goalConfiguration;
+    std::vector<float> dofWeights;
+    std::vector<float> dofLimUpper;
+    std::vector<float> dofLimLower;
+
 public:
     ChrisModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
         RegisterCommand("MyCommand",boost::bind(&ChrisModule::MyCommand,this,_1,_2),
@@ -41,11 +48,35 @@ public:
     	// now we have our weight and goal vector
 
     	// obtain starting configuration
+    	std::vector<RobotBasePtr> robots;
+    	GetEnv()->GetRobots(robots);
+    	RobotBasePtr robot = robots[0];
+
+    	std::vector<double> dJointVals;
+    	robot.get()->GetActiveDOFValues(dJointVals);
+    	std::vector<float> jointVals(dJointVals.begin(), dJointVals.end());
 
     	// create first node and add it to the tree
-//    	nodeTree.addNode()
+    	nodeTree.addNode(jointVals, NULL);
 
-    	// randomly sample from c-space
+    	// save joint limits
+    	std::vector<double> dUpperLim, dLowerLim;
+    	robot.get()->GetActiveDOFLimits(dLowerLim, dUpperLim);
+    	std::vector<float> tempLimLower(dLowerLim.begin(), dLowerLim.end());
+    	dofLimLower = tempLimLower;
+    	std::vector<float> tempLimUpper(dUpperLim.begin(), dUpperLim.end());
+    	dofLimUpper = tempLimUpper;
+    	std::cout << std::endl << "saved lower joint limits: " << std::endl;
+    	for (auto i = dofLimLower.begin(); i != dofLimLower.end(); ++i){
+    		std::cout << *i << ' ';
+    	}
+    	std::cout << std::endl << "saved upper joint limits: " << std::endl;
+    	for (auto i = dofLimUpper.begin(); i != dofLimUpper.end(); ++i){
+    		std::cout << *i << ' ';
+    	}
+    	std::cout << std::endl << std::endl;
+
+    	// sample randomly from c-space
 
     	// find nearest neighbor
 
@@ -104,11 +135,6 @@ public:
     	return nums;
     }
 
-private:
-    NodeTree nodeTree;
-    std::vector<float> goalConfiguration;
-    std::vector<float> dofWeights;
-
 };
 
 
@@ -164,7 +190,10 @@ void NodeTree::addNode(RRTNode* node){
 }
 
 void NodeTree::addNode(std::vector<float> configuration, RRTNode* parent){
-    _nodes.emplace_back(configuration, parent); // faster, allocates in place
+//	std::vector<float> config = configuration;
+//	RRTNode* par = parent;
+	_nodes.push_back(new RRTNode(configuration, parent));
+//    _nodes.emplace_back(config, par); // faster, allocates in place
 }
 
 void NodeTree::deleteNode(unsigned index){
