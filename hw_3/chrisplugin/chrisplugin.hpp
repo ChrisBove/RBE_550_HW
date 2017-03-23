@@ -3,6 +3,9 @@
 #include <vector>
 using namespace OpenRAVE;
 
+double weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights);
+double euclidDistance(std::vector<double> configuration1, std::vector<double> configuration2);
+
 class RRTNode
 {
 public:
@@ -45,7 +48,5 @@ public:
 
 private:
 	std::vector<RRTNode*> _nodes;
-
-	double weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights);
 
 };

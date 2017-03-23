@@ -15,6 +15,8 @@ using namespace OpenRAVE;
 
 #include "chrisplugin.hpp"
 
+#define STEP_SIZE 0.5
+
 class ChrisModule : public ModuleBase
 {
 private:
@@ -25,7 +27,7 @@ private:
     std::vector<double> dofLimLower;
     RobotBasePtr robot;
 
-    const double stepSize = 0.05;
+    const double stepSize = STEP_SIZE;
 
     // http://stackoverflow.com/questions/14638739/generating-a-random-double-between-a-range-of-values
     //Mersenne Twister: Good quality random number generator
@@ -229,12 +231,19 @@ public:
     	vector << (config[0]-vNear[0]),(config[1]-vNear[1]),(config[2]-vNear[2]),(config[3]-vNear[3]),(config[4]-vNear[4]),(config[5]-vNear[5]),(config[6]-vNear[6]);
     	Eigen::VectorXd normalized = vector/vector.norm();
 
+    	// save this, we need to add it back to the normalized vector to get a valid configuration
+    	Eigen::VectorXd nearestVector(7);
+    	nearestVector << (vNear[0]),(vNear[1]),(vNear[2]),(vNear[3]),(vNear[4]),(vNear[5]),(vNear[6]);
+
+    	// TODO add back the original configuration (right now it's centered around 0
+
     	bool done = false;
     	unsigned stepCount = 1;
     	RRTNode* parent = nearest;
     	while(!done){
     		Eigen::VectorXd desired(7);
     		desired = (stepSize*stepCount)*normalized;
+    		desired = desired + nearestVector;
     		std::vector<double> desiredConfig = eigenVectorToV(desired);
 
     		// if not in a collision
@@ -252,9 +261,11 @@ public:
     			}
     		}
     		else{
+    			std::cout << "new config collided - trapped" << std::endl;
     			// we're done here - we are trapped
     			done = true;
     		}
+    		stepCount++; // duh!
     	}
     	return ExtendCodes::Trapped;
     }
@@ -268,11 +279,14 @@ public:
     }
 
     bool configsClose(std::vector<double> config1, std::vector<double> config2){
-    	for (unsigned i = 0; i < config1.size(); i++){
-    		if(std::abs(config1[i] - config2[i]) > 0.01)
-    			return false;
-    	}
-    	return true;
+    	if(euclidDistance(config1, config2) < STEP_SIZE)
+    		return true;
+    	return false;
+//    	for (unsigned i = 0; i < config1.size(); i++){
+//    		if(std::abs(config1[i] - config2[i]) > 0.01)
+//    			return false;
+//    	}
+//    	return true;
     }
 
 };
@@ -409,7 +423,7 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
     return closestNode;
 }
 
-double NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){
+double weightedEuclidDistance(std::vector<double> configuration1, std::vector<double> configuration2, std::vector<double> weights){
     double sum = 0;
     for(unsigned i = 0; i < configuration1.size(); i++){
         sum += pow(weights[i]*(configuration1[i] - configuration2[i]),2);
@@ -417,3 +431,10 @@ double NodeTree::weightedEuclidDistance(std::vector<double> configuration1, std:
     return sqrt(sum);
 }
 
+double euclidDistance(std::vector<double> configuration1, std::vector<double> configuration2){
+    double sum = 0;
+    for(unsigned i = 0; i < configuration1.size(); i++){
+        sum += pow(configuration1[i] - configuration2[i],2);
+    }
+    return sqrt(sum);
+}
