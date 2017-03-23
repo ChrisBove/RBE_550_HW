@@ -8,6 +8,7 @@ if (CMAKE_VERSION VERSION_LESS "3.1")
 endif ()
 
 set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 #set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 # install here: http://askubuntu.com/questions/610291/how-to-install-cmake-3-2-on-ubuntu-14-04
