@@ -42,7 +42,9 @@ public:
 	RRTNode* addNode(std::vector<double> configuration, RRTNode* parent);
 	void deleteNode(unsigned node);
 	RRTNode* getNode(unsigned index);
-	std::vector<RRTNode*> getPath(unsigned index);
+	std::vector<std::vector<double>> getPath(unsigned index);
+
+	unsigned getNumElems();
 
 	RRTNode* nearestNeighbor(std::vector<double> configuration, std::vector<double> weights);
 

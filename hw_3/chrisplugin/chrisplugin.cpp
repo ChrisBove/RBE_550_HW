@@ -148,15 +148,43 @@ public:
     			if(code == ExtendCodes::Reached){
     				// return the path to the goal
     				std::cout << "WE REACHED THE GOAL" << std::endl;
+    				foundGoal = true;
     				break;
-    				// TODO do the path thing
     			}
     		}
     		// for bi-directional, this is where we switch which tree we grow
 
     	}
-    	std::cout << "took " << iterations << " to find the goal" << std::endl;
     	isColliding(&startingConfig);
+
+    	std::cout << "took " << iterations << " iterations to find the goal" << std::endl;
+
+    	if(foundGoal){
+    		// save path
+    		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
+
+    		auto manip = robot->GetActiveManipulator();
+
+    		// display eef position as red points in environment
+    		for (auto config : path){
+    			robot.get()->SetActiveDOFValues(config);
+    			auto eef = manip.get()->GetEndEffectorTransform();
+//    			GetEnv()->plot3(eef.trans, 10);
+//    			GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+
+//    			with robot: # lock environment and save robot state
+//    			    robot.SetDOFValues([2.58, 0.547, 1.5, -0.7],[0,1,2,3]) # set the first 4 dof values
+//    			    Tee = manip.GetEndEffectorTransform() # get end effector
+//    			    ikparam = IkParameterization(Tee[0:3,3],ikmodel.iktype) # build up the translation3d ik query
+//    			    sols = manip.FindIKSolutions(ikparam, IkFilterOptions.CheckEnvCollisions) # get all solutions
+//
+//    			h = env.plot3(Tee[0:3,3],10) # plot one point
+    		}
+    		// smooth the path
+
+    		// execute the robot trajectory
+    	}
+
     	return true;
     }
 
@@ -257,8 +285,6 @@ public:
     	// save this, we need to add it back to the normalized vector to get a valid configuration
     	Eigen::VectorXd nearestVector(7);
     	nearestVector << (vNear[0]),(vNear[1]),(vNear[2]),(vNear[3]),(vNear[4]),(vNear[5]),(vNear[6]);
-
-    	// TODO add back the original configuration (right now it's centered around 0
 
     	bool done = false;
     	unsigned stepCount = 1;
@@ -382,15 +408,19 @@ RRTNode* NodeTree::getNode(unsigned index){
     return _nodes[index];
 }
 
-std::vector<RRTNode*> NodeTree::getPath(unsigned index){
-    std::vector<RRTNode*> path;
+unsigned NodeTree::getNumElems(){
+	return _nodes.size();
+}
+
+std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
+    std::vector<std::vector<double>> path;
     RRTNode* currentNode = _nodes[index];
 
-    path.push_back(currentNode);
+    path.push_back(currentNode->getConfiguration());
 
     while(currentNode->getParent() != NULL){
         currentNode = currentNode->getParent();
-        path.push_back(currentNode);
+        path.push_back(currentNode->getConfiguration());
     }
 
     std::reverse(path.begin(), path.end());
