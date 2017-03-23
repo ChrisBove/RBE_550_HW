@@ -11,11 +11,21 @@ using namespace OpenRAVE;
 #include <random>
 #include <ctime>
 #include <eigen3/Eigen/Core>
+#include <unistd.h>
+#include <stdio.h>
+#include <signal.h>
 
 
 #include "chrisplugin.hpp"
 
 #define STEP_SIZE 0.5
+
+// from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
+volatile sig_atomic_t stop;
+
+void inthand(int signum) {
+    stop = 1;
+}
 
 class ChrisModule : public ModuleBase
 {
@@ -102,11 +112,15 @@ public:
     	rng.seed(std::random_device{}());
     	generateDistributions();
 
-    	for (unsigned k = 0; k < 2000; k++){
+    	bool foundGoal = false;
+    	unsigned iterations = 0;
+
+    	while(!foundGoal && !stop){
+    		iterations++;
     		std::vector<double> qRand;
 
     		// is it bias time?
-    		if(zeroToOneDist(rng) <= 0.01) {
+    		if(zeroToOneDist(rng) <= 0.05) {
     			qRand = goalConfiguration;
     		}
     		else{
@@ -122,23 +136,26 @@ public:
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
 
-    		std::cout << std::endl << "nearest neighbor joint value: " << std::endl;
-    		for (auto i = nearestNode->getConfiguration().begin(); i != nearestNode->getConfiguration().end(); ++i){
-    			std::cout << *i << ' ';
-    		}
-    		std::cout << std::endl << std::endl;
+//    		std::cout << std::endl << "nearest neighbor joint value: " << std::endl;
+//    		for (auto i = nearestNode->getConfiguration().begin(); i != nearestNode->getConfiguration().end(); ++i){
+//    			std::cout << *i << ' ';
+//    		}
+//    		std::cout << std::endl << std::endl;
 
     		// connect - try to connect to tree
     		ExtendCodes code = connect(qRand, nearestNode);
     		if(code != ExtendCodes::Trapped){
     			if(code == ExtendCodes::Reached){
     				// return the path to the goal
+    				std::cout << "WE REACHED THE GOAL" << std::endl;
+    				break;
     				// TODO do the path thing
     			}
     		}
     		// for bi-directional, this is where we switch which tree we grow
 
     	}
+    	std::cout << "took " << iterations << " to find the goal" << std::endl;
     	isColliding(&startingConfig);
     	return true;
     }
@@ -196,8 +213,14 @@ public:
     void generateDistributions(){
     	// for each joint, generate the distribution
     	for (unsigned i = 0; i < dofLimLower.size(); i++){
-    		std::uniform_real_distribution<double> dist(dofLimLower[i], dofLimUpper[i]);
-    		distributions.push_back(dist);
+    		if(abs(dofLimLower[i]) > 2*PI){
+    			std::uniform_real_distribution<double> dist(-2*PI, 2*PI);
+    			distributions.push_back(dist);
+    		}
+    		else{
+    			std::uniform_real_distribution<double> dist(dofLimLower[i], dofLimUpper[i]);
+    			distributions.push_back(dist);
+    		}
     	}
     }
 
@@ -240,7 +263,7 @@ public:
     	bool done = false;
     	unsigned stepCount = 1;
     	RRTNode* parent = nearest;
-    	while(!done){
+    	while(!done && !stop){
     		Eigen::VectorXd desired(7);
     		desired = (stepSize*stepCount)*normalized;
     		desired = desired + nearestVector;
