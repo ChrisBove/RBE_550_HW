@@ -28,6 +28,13 @@ void inthand(int signum) {
     stop = 1;
 }
 
+void printConfig(std::vector<double> config){
+	for (auto i = config.begin(); i != config.end(); ++i){
+		std::cout << *i << ' ';
+	}
+	std::cout << std::endl << std::endl;
+}
+
 class ChrisModule : public ModuleBase
 {
 private:
@@ -342,7 +349,7 @@ public:
 
     ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
     	if (configsClose(config, nearest->getConfiguration())){
-    		std::cout << "This node was too close to nearest - same thing" << std::endl;
+//    		std::cout << "This node was too close to nearest - same thing" << std::endl;
     		return ExtendCodes::Trapped;
     	}
     	// try to step towards the configuration, avoiding collisions
@@ -380,7 +387,7 @@ public:
     			}
     		}
     		else{
-    			std::cout << "new config collided - trapped" << std::endl;
+//    			std::cout << "new config collided - trapped" << std::endl;
     			// we're done here - we are trapped
     			done = true;
     		}
@@ -467,7 +474,7 @@ RRTNode* NodeTree::addNode(std::vector<double> configuration, RRTNode* parent){
 //	RRTNode* par = parent;
 	_nodes.push_back(new RRTNode(configuration, parent));
 //    _nodes.emplace_back(config, par); // faster, allocates in place
-	return _nodes.front();
+	return _nodes.back();
 }
 
 void NodeTree::deleteNode(unsigned index){
@@ -486,12 +493,21 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
     std::vector<std::vector<double>> path;
     RRTNode* currentNode = _nodes[index];
 
+    std::cout << "I see " << _nodes.size() << " nodes in my tree. Looking for index " << index << std::endl;
+    printConfig(currentNode->getConfiguration());
+
     path.push_back(currentNode->getConfiguration());
+
+    unsigned count = 0;
 
     while(currentNode->getParent() != NULL){
         currentNode = currentNode->getParent();
+        printConfig(currentNode->getConfiguration());
         path.push_back(currentNode->getConfiguration());
+        count++;
     }
+
+    std::cout << "There were " << count << " nodes in the path" << std::endl;
 
     std::reverse(path.begin(), path.end());
 
@@ -538,7 +554,7 @@ RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vecto
     	}
     	count++;
     }
-    std::cout << "Counted " << count << " neighbors." << std::endl;
+//    std::cout << "Counted " << count << " neighbors." << std::endl;
 //    // heap them so that the shortest is at the top
 //    std::make_heap(neighbors.begin(), neighbors.end(), costComparitor());
     // pick the one at the top
