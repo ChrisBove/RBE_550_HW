@@ -1,4 +1,5 @@
 #include <openrave/plugin.h>
+#include <openrave/planningutils.h>
 #include <boost/bind.hpp>
 using namespace OpenRAVE;
 #include <algorithm>
@@ -71,6 +72,7 @@ public:
      *
      */
     bool FindPath(std::ostream& sout, std::istream& sinput){
+    	EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex()); // lock environment
     	parseArguments(sinput);
     	// now we have our weight and goal vector
 
@@ -160,16 +162,61 @@ public:
     	std::cout << "took " << iterations << " iterations to find the goal" << std::endl;
 
     	if(foundGoal){
+    		GraphHandlePtr pgraph;
     		// save path
     		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
 
     		auto manip = robot->GetActiveManipulator();
 
-    		// display eef position as red points in environment
+    		// create a new output trajectory
+    		TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+    		auto cSpaceSpec = robot->GetActiveConfigurationSpecification("linear");
+
+    		std::vector<RaveVector<float> > vpoints;
+    		std::vector<dReal> vtrajdata;
+
+    		unsigned count = 0;
     		for (auto config : path){
-    			robot.get()->SetActiveDOFValues(config);
-    			auto eef = manip.get()->GetEndEffectorTransform();
-//    			GetEnv()->plot3(eef.trans, 10);
+    			if (count == 0){
+    				ptraj->Init(cSpaceSpec);
+    			}
+    			ptraj->Insert(count, config);
+    			robot->SetActiveDOFValues(vtrajdata);
+    			vpoints.push_back(manip->GetEndEffectorTransform().trans);
+    			count++;
+    		}
+
+    		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+
+    		planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, 0.5, 0.5, "LinearTrajectoryRetimer", "");
+//    		        openravepy.planningutils.RetimeActiveDOFTrajectory(traj, robot, False, 0.5, 0.5, "LinearTrajectoryRetimer", "")
+//
+//    		        robot.GetController().SetPath(traj)
+//    		        print('Trajectory sent to robot. Waiting for robot to move.')
+
+    		// draw the end effector of the trajectory
+//    		{
+//    			//RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
+//    			std::vector<RaveVector<float> > vpoints;
+//    			std::vector<dReal> vtrajdata;
+//    			for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
+//    				ptraj->Sample(vtrajdata,ftime,robot->GetActiveConfigurationSpecification());
+//    				robot->SetActiveDOFValues(vtrajdata);
+//    				vpoints.push_back(manip->GetEndEffectorTransform().trans);
+//    			}
+//    			pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+//    		}
+
+    		// send the trajectory to the robot
+    		robot->GetController()->SetPath(ptraj);
+
+    		// display eef position as red points in environment
+//    		for (auto config : path){
+//    			robot.get()->SetActiveDOFValues(config);
+//    			auto eef = manip.get()->GetEndEffectorTransform().trans;
+////    			GetEnv()->plot3(eef.trans, 10);
+//    			GetEnv()->plot3(&eef, 1, sizeof(eef), 1.0f);
+    			//pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
 //    			GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
 
 //    			with robot: # lock environment and save robot state
@@ -179,7 +226,30 @@ public:
 //    			    sols = manip.FindIKSolutions(ikparam, IkFilterOptions.CheckEnvCollisions) # get all solutions
 //
 //    			h = env.plot3(Tee[0:3,3],10) # plot one point
-    		}
+
+    			// create a new output trajectory
+//    			TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
+//    			if( !planner->PlanPath(ptraj) ) {
+//    				RAVELOG_WARN("plan failed, trying again\n");
+//    				continue;
+//    			}
+//
+//    			// draw the end effector of the trajectory
+//    			{
+//    				RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
+//    				vector<RaveVector<float> > vpoints;
+//    				vector<dReal> vtrajdata;
+//    				for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
+//    					ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
+//    					probot->SetActiveDOFValues(vtrajdata);
+//    					vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
+//    				}
+//    				pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+//    			}
+//
+//    			// send the trajectory to the robot
+//    			probot->GetController()->SetPath(ptraj);
+//    		}
     		// smooth the path
 
     		// execute the robot trajectory
