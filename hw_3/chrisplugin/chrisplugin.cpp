@@ -173,6 +173,7 @@ public:
     		// save path
     		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
 
+    		robot->SetActiveManipulator(0);
     		auto manip = robot->GetActiveManipulator();
 
     		// create a new output trajectory
@@ -189,7 +190,6 @@ public:
     				ptraj->Init(cSpaceSpec);
     			}
     			ptraj->Insert(count, config);
-    			robot->SetActiveDOFValues(vtrajdata);
     			vpoints.push_back(manip->GetEndEffectorTransform().trans);
     			count++;
     		}
