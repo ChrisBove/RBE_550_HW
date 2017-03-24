@@ -23,7 +23,7 @@ using namespace OpenRAVE;
 
 #define STEP_SIZE 0.3
 #define GOAL_BIAS 0.11
-#define MAX_SMOOTHING_ITERS 50
+#define MAX_SMOOTHING_ITERS 200
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -266,10 +266,15 @@ public:
 
     	// now iterate through and try shortcutting
 
+    	std::cout << "k," << "joint angle path length from start to goal" << std::endl;
+
     	if(path.size() > 2){
 			// for number of iterations
 			for(unsigned k = 0; k <= MAX_SMOOTHING_ITERS; k++){
 				if (stop) break;
+
+				std::cout << k << "," << pathDistance(pathTree.getPath(pathTree.getNumElems()-1)) << std::endl;
+
 				// for every node in the path, try finding shorter paths to a particular node
 				for(unsigned fellows = 0; fellows < pathTree.getNumElems()-1; fellows++){
 					if(stop){
@@ -319,7 +324,7 @@ public:
 
 					// if not trapped,
 					if(!code == ExtendCodes::Trapped){
-						std::cout << "Not trapped!" << std::endl;
+//						std::cout << "Not trapped! K is " << k << std::endl;
 						// connect the child's parent to the last added node (since it was advancing that way)
 						child->setParent(pathTree.getBack());
 						// compute path length
@@ -328,7 +333,7 @@ public:
 
 						// if less than original
 						if(newPathLength < pathLength){
-							std::cout << "found new path length " << newPathLength << " better than " << pathLength << std::endl;
+//							std::cout << "found new path length " << newPathLength << " better than " << pathLength << std::endl;
 							// make childest's new parent the last node in the connection extension
 							// recompute path from goal index
 							// construct new tree and start again
@@ -351,6 +356,8 @@ public:
 				}
 			}
     	}
+
+    	stop = 0; // in case people just cut out of smoothing early
 
     	return pathTree.getPath(pathTree.getNumElems()-1);
 
