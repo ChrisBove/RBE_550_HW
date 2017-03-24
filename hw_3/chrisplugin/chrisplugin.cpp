@@ -19,7 +19,7 @@ using namespace OpenRAVE;
 
 #include "chrisplugin.hpp"
 
-#define STEP_SIZE 0.5
+#define STEP_SIZE 0.4
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -345,7 +345,7 @@ public:
 
     bool isColliding(std::vector<double>* config){
     	robot.get()->SetActiveDOFValues(*config);
-    	return GetEnv()->CheckCollision(robot);
+    	return GetEnv()->CheckCollision(robot) || robot->CheckSelfCollision();
     }
 
     ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
