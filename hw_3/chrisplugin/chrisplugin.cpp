@@ -23,7 +23,7 @@ using namespace OpenRAVE;
 
 #define STEP_SIZE 0.3
 #define GOAL_BIAS 0.11
-#define MAX_SMOOTHING_ITERS 200
+#define MAX_SMOOTHING_ITERS 100
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -191,15 +191,22 @@ public:
 
     	std::cout << "took " << iterations << " iterations to find the goal." << std::endl;
     	std::cout << "Step size was " << STEP_SIZE << " and goal bias was " << GOAL_BIAS << std::endl;
-    	std::cout << "Time difference (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
+    	std::cout << "Time difference for search (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
+    	std::cout << "Number of nodes sampled: " << _nodeTree.getNumElems() << std::endl;
+
 
     	if(foundGoal){
 
     		// save path
     		std::vector<std::vector<double>> path = _nodeTree.getPath(_nodeTree.getNumElems()-1); // the last element
+    		std::cout << "Unsmoothed joint path distance" << pathDistance(path) << std::endl;
 
     		std::cout << "Smoothing the path out... " << std::endl;
+    		begin = std::chrono::steady_clock::now();
     		std::vector<std::vector<double>> smoothedPath = smoothPath(path); // smoothing
+    		std::cout << "Smoothed joint path distance" << pathDistance(smoothedPath) << std::endl;
+        	std::cout << "Time difference for smoothing (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
+
 
 
     		robot->SetActiveManipulator(0);
@@ -266,14 +273,14 @@ public:
 
     	// now iterate through and try shortcutting
 
-    	std::cout << "k," << "joint angle path length from start to goal" << std::endl;
+//    	std::cout << "k," << "joint angle path length from start to goal" << std::endl;
 
     	if(path.size() > 2){
 			// for number of iterations
 			for(unsigned k = 0; k <= MAX_SMOOTHING_ITERS; k++){
 				if (stop) break;
 
-				std::cout << k << "," << pathDistance(pathTree.getPath(pathTree.getNumElems()-1)) << std::endl;
+//				std::cout << k << "," << pathDistance(pathTree.getPath(pathTree.getNumElems()-1)) << std::endl;
 
 				// for every node in the path, try finding shorter paths to a particular node
 				for(unsigned fellows = 0; fellows < pathTree.getNumElems()-1; fellows++){

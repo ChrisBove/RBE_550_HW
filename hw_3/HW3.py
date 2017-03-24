@@ -101,5 +101,5 @@ if __name__ == "__main__":
         ### END OF YOUR CODE ###
     waitrobot(robot)
 
-    raw_input("Press enter to exit...")
+    #raw_input("Press enter to exit...")
     RaveDestroy()
