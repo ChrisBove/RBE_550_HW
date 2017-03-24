@@ -15,11 +15,12 @@ using namespace OpenRAVE;
 #include <unistd.h>
 #include <stdio.h>
 #include <signal.h>
-
+#include <chrono>
 
 #include "chrisplugin.hpp"
 
-#define STEP_SIZE 0.4
+#define STEP_SIZE 0.3
+#define GOAL_BIAS 0.11
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -44,6 +45,7 @@ private:
     std::vector<double> dofLimUpper;
     std::vector<double> dofLimLower;
     RobotBasePtr robot;
+    GraphHandlePtr pgraph;
 
     const double stepSize = STEP_SIZE;
 
@@ -79,7 +81,6 @@ public:
      *
      */
     bool FindPath(std::ostream& sout, std::istream& sinput){
-    	EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex()); // lock environment
     	parseArguments(sinput);
     	// now we have our weight and goal vector
 
@@ -99,6 +100,8 @@ public:
     		std::cout << "ERROR: GOAL CONFIGURATION IN COLLISION STATE. ABORT." << std::endl;
     		return false;
     	}
+
+    	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     	// create first node and add it to the tree
     	nodeTree.addNode(startingConfig, NULL);
@@ -125,11 +128,12 @@ public:
     	unsigned iterations = 0;
 
     	while(!foundGoal && !stop){
+    		EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex()); // lock environment
     		iterations++;
     		std::vector<double> qRand;
 
     		// is it bias time?
-    		if(zeroToOneDist(rng) <= 0.05) {
+    		if(zeroToOneDist(rng) <= GOAL_BIAS) {
     			qRand = goalConfiguration;
     		}
     		else{
@@ -158,6 +162,7 @@ public:
     				// return the path to the goal
     				std::cout << "WE REACHED THE GOAL" << std::endl;
     				foundGoal = true;
+    				nodeTree.addNode(goalConfiguration, nodeTree.getBack()); // just in case we have a small error
     				break;
     			}
     		}
@@ -166,10 +171,14 @@ public:
     	}
     	isColliding(&startingConfig);
 
+    	// from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
+    	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
     	std::cout << "took " << iterations << " iterations to find the goal" << std::endl;
+    	std::cout << "Time difference (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
 
     	if(foundGoal){
-    		GraphHandlePtr pgraph;
+
     		// save path
     		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
 
@@ -185,16 +194,22 @@ public:
 
     		unsigned count = 0;
     		for (auto config : path){
-    			printConfig(config);
     			if (count == 0){
     				ptraj->Init(cSpaceSpec);
     			}
     			ptraj->Insert(count, config);
+    			robot.get()->SetActiveDOFValues(config);
     			vpoints.push_back(manip->GetEndEffectorTransform().trans);
+
+//    			auto trans = manip->GetEndEffectorTransform().trans;
+//    			sout << "[" << trans.x << "," << trans.y << "," << trans.z << "]" << std::endl;
+
     			count++;
     		}
 
-    		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+    		std::cout << "Drawing path of eef." << std::endl;
+
+    		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),2.0f, RaveVector<float>(1,0,0,1));
 
     		planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, 0.5, 0.5, "LinearTrajectoryRetimer", "");
 //    		        openravepy.planningutils.RetimeActiveDOFTrajectory(traj, robot, False, 0.5, 0.5, "LinearTrajectoryRetimer", "")
@@ -262,6 +277,8 @@ public:
 
     		// execute the robot trajectory
     	}
+
+    	std::cout << "Sent trajectory to robot." << std::endl;
 
     	return true;
     }
@@ -486,6 +503,10 @@ RRTNode* NodeTree::getNode(unsigned index){
     return _nodes[index];
 }
 
+RRTNode* NodeTree::getBack(){
+	return _nodes.back();
+}
+
 unsigned NodeTree::getNumElems(){
 	return _nodes.size();
 }
@@ -494,8 +515,8 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
     std::vector<std::vector<double>> path;
     RRTNode* currentNode = _nodes[index];
 
-    std::cout << "I see " << _nodes.size() << " nodes in my tree. Looking for index " << index << std::endl;
-    printConfig(currentNode->getConfiguration());
+//    std::cout << "I see " << _nodes.size() << " nodes in my tree. Looking for index " << index << std::endl;
+//    printConfig(currentNode->getConfiguration());
 
     path.push_back(currentNode->getConfiguration());
 
@@ -503,7 +524,7 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
 
     while(currentNode->getParent() != NULL){
         currentNode = currentNode->getParent();
-        printConfig(currentNode->getConfiguration());
+//        printConfig(currentNode->getConfiguration());
         path.push_back(currentNode->getConfiguration());
         count++;
     }

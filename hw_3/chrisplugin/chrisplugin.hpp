@@ -42,6 +42,7 @@ public:
 	RRTNode* addNode(std::vector<double> configuration, RRTNode* parent);
 	void deleteNode(unsigned node);
 	RRTNode* getNode(unsigned index);
+	RRTNode* getBack();
 	std::vector<std::vector<double>> getPath(unsigned index);
 
 	unsigned getNumElems();
