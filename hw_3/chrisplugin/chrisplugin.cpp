@@ -49,7 +49,7 @@ std::vector<std::vector<double>> getNodePath(RRTNode* parent, RRTNode* child){
 
 	unsigned count = 0;
 
-	while((currentNode->getParent() != NULL || currentNode->getParent() == parent) && !stop){
+	while(((currentNode->getParent() != NULL) && (currentNode->getParent() != parent)) && !stop){
 		currentNode = currentNode->getParent();
 		path.push_back(currentNode->getConfiguration());
 		count++;
@@ -70,6 +70,7 @@ private:
     std::vector<double> dofLimLower;
     RobotBasePtr robot;
     GraphHandlePtr pgraph;
+    GraphHandlePtr pgraphSmoothed;
 
     const double stepSize = STEP_SIZE;
 
@@ -207,17 +208,28 @@ public:
     		TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
     		auto cSpaceSpec = robot->GetActiveConfigurationSpecification("linear");
 
+    		// stuff original path into drawable points
     		std::vector<RaveVector<float> > vpoints;
+    		for (auto config : path){
+    			robot.get()->SetActiveDOFValues(config);
+    			vpoints.push_back(manip->GetEndEffectorTransform().trans);
+    		}
+
+    		std::cout << "Drawing original path of eef." << std::endl;
+
+    		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),2.0f, RaveVector<float>(1,0,0,1));
+
+    		std::vector<RaveVector<float> > vpointsSmooth;
     		std::vector<dReal> vtrajdata;
 
     		unsigned count = 0;
-    		for (auto config : path){
+    		for (auto config : smoothedPath){
     			if (count == 0){
     				ptraj->Init(cSpaceSpec);
     			}
     			ptraj->Insert(count, config);
     			robot.get()->SetActiveDOFValues(config);
-    			vpoints.push_back(manip->GetEndEffectorTransform().trans);
+    			vpointsSmooth.push_back(manip->GetEndEffectorTransform().trans);
 
 //    			auto trans = manip->GetEndEffectorTransform().trans;
 //    			sout << "[" << trans.x << "," << trans.y << "," << trans.z << "]" << std::endl;
@@ -225,10 +237,9 @@ public:
     			count++;
     		}
 
-    		std::cout << "Drawing path of eef." << std::endl;
+//    		pgraph = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),5.0f, RaveVector<float>(1,0,0,1));
 
-    		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),2.0f, RaveVector<float>(1,0,0,1));
-    		pgraph = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),5.0f, RaveVector<float>(1,0,0,1));
+    		pgraphSmoothed = GetEnv()->drawlinestrip(&vpointsSmooth[0].x,vpointsSmooth.size(),sizeof(vpointsSmooth[0]),2.0f, RaveVector<float>(0,0,1,1));
 
     		planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, 0.5, 0.5, "LinearTrajectoryRetimer", "");
 
@@ -257,6 +268,10 @@ public:
     	if(path.size() > 2){
 			// for number of iterations
 			for(unsigned k = 0; k <= MAX_SMOOTHING_ITERS; k++){
+				if(stop){
+					break;
+				}
+				std::cout << "K is " << k << std::endl;
 				// save the goal index
 				unsigned goalIndex = pathTree.getNumElems()-1;
 
@@ -272,30 +287,40 @@ public:
 					allSet = true;
 				}
 
+				std::cout << "Came up with pick1: " << pick1 << " and pick2: " << pick2 << " with a goal index of " << goalIndex << " and size of " << pathTree.getNumElems() << std::endl;
+
 				RRTNode* parent;
 				RRTNode* child;
 				parent = pathTree.getNode(pick1);
 				child = pathTree.getNode(pick2);
 
+				std::cout << "got nodes from pick indices" << std::endl;
+
 				// determine which is parent of what, switch if backward
-				if(!isParentOf(parent, child)){
+				if(!isChildOf(child, parent)){
 					RRTNode* temp = parent;
 					parent = child;
 					child = temp;
 				}
 
+				std::cout << "Switched around nodes. " << std::endl;
+
 				// compute path length
 				double pathLength = nodeDistance(parent, child);
+
+				std::cout << "computed path length: " << pathLength << std::endl;
 
 				// try extend connecting the two (go from parent (closest to start) to childest (closer to goal))
 				ExtendCodes code = connect(child->getConfiguration(), parent, &pathTree);
 
 				// if not trapped,
 				if(!code == ExtendCodes::Trapped){
+					std::cout << "Not trapped!" << std::endl;
 					// connect the child's parent to the last added node (since it was advancing that way)
 					child->setParent(pathTree.getBack());
 					// compute path length
 					double newPathLength = nodeDistance(parent, child);
+					std::cout << "new path length " << newPathLength << std::endl;
 
 					// if less than original
 					if(newPathLength < pathLength){
@@ -309,11 +334,14 @@ public:
 
 						// write into path tree
 						writePathIntoTree(newPath, &pathTree);
+						oldTree.clear();
+						oldTree = pathTree;
 					}
-					else{
-						// restore the previous state of the tree
-						pathTree = oldTree;
-					}
+				}
+				else{
+					// restore the previous state of the tree
+					pathTree.clear();
+					pathTree = oldTree;
 				}
 			}
     	}
@@ -338,14 +366,31 @@ public:
     // is node1 a parent of node2?
     bool isParentOf(RRTNode* node1, RRTNode* node2){
     	RRTNode* intermediateNode = node2->getParent();
+    	if(intermediateNode == NULL){
+    		return false; // node 2 is actually a parent of node 1 - we hit the starting position
+    	}
 
-    	while((intermediateNode != node1 || intermediateNode != NULL) && !stop){
+    	while(((intermediateNode->getParent() != NULL) || (intermediateNode != node1 )) && !stop){
     		if(intermediateNode->getParent() == NULL){
     			return false; // node 2 is actually a parent of node 1 - we hit the starting position
     		}
     		intermediateNode = intermediateNode->getParent();
     	}
     	return true;
+    }
+
+    // is node1 a child of node2?
+    bool isChildOf(RRTNode* node1, RRTNode* node2){
+    	RRTNode* parentalNode = node1->getParent();
+
+    	while(parentalNode != NULL && !stop){
+    		if(parentalNode == node2){
+    			return true; // node 2 is actually a parent of node 1
+    		}
+    		parentalNode = parentalNode->getParent();
+    	}
+    	return false; // hit end of tree without finding match
+
     }
 
     // finds path distance between child and parent nodes
@@ -355,10 +400,11 @@ public:
 
     double pathDistance(std::vector<std::vector<double>> path) {
     	double sum = 0;
-    	unsigned count = 0;
+    	double count = 0;
 
     	for (unsigned i = 1; i < path.size(); i++){
     		sum += euclidDistance(path[i], path[i-1]);
+    		std::cout << "distance sum is " << sum << "and count is " << count << std::endl;
     		count++;
     	}
     	return sum/count;
