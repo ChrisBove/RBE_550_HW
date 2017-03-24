@@ -40,10 +40,30 @@ void printConfig(std::vector<double> config){
 	std::cout << std::endl << std::endl;
 }
 
+// gets path between two specified indices
+std::vector<std::vector<double>> getNodePath(RRTNode* parent, RRTNode* child){
+	std::vector<std::vector<double>> path;
+	RRTNode* currentNode = child;
+
+	path.push_back(currentNode->getConfiguration());
+
+	unsigned count = 0;
+
+	while((currentNode->getParent() != NULL || currentNode->getParent() == parent) && !stop){
+		currentNode = currentNode->getParent();
+		path.push_back(currentNode->getConfiguration());
+		count++;
+	}
+
+	std::reverse(path.begin(), path.end());
+
+	return path;
+}
+
 class ChrisModule : public ModuleBase
 {
 private:
-    NodeTree nodeTree;
+    NodeTree _nodeTree;
     std::vector<double> goalConfiguration;
     std::vector<double> dofWeights;
     std::vector<double> dofLimUpper;
@@ -109,7 +129,7 @@ public:
     	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     	// create first node and add it to the tree
-    	nodeTree.addNode(startingConfig, NULL);
+    	_nodeTree.addNode(startingConfig, NULL);
 
     	// save joint limits
     	robot.get()->GetActiveDOFLimits(dofLimLower, dofLimUpper);
@@ -147,16 +167,16 @@ public:
     		}
 
     		// find nearest neighbor
-    		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
+    		RRTNode* nearestNode = _nodeTree.nearestNeighbor(qRand, dofWeights);
 
     		// connect - try to connect to tree
-    		ExtendCodes code = connect(qRand, nearestNode);
+    		ExtendCodes code = connect(qRand, nearestNode, &_nodeTree);
     		if(code != ExtendCodes::Trapped){
     			if(code == ExtendCodes::Reached){
     				// return the path to the goal
     				std::cout << "WE REACHED THE GOAL" << std::endl;
     				foundGoal = true;
-    				nodeTree.addNode(goalConfiguration, nodeTree.getBack()); // just in case we have a small error
+    				_nodeTree.addNode(goalConfiguration, _nodeTree.getBack()); // just in case we have a small error
     				break;
     			}
     		}
@@ -175,7 +195,7 @@ public:
     	if(foundGoal){
 
     		// save path
-    		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
+    		std::vector<std::vector<double>> path = _nodeTree.getPath(_nodeTree.getNumElems()-1); // the last element
 
     		std::vector<std::vector<double>> smoothedPath = smoothPath(path); // smoothing
 
@@ -228,41 +248,122 @@ public:
     std::vector<std::vector<double>> smoothPath(std::vector<std::vector<double>> path){
     	// create new node tree
     	NodeTree pathTree;
+    	writePathIntoTree(path, &pathTree);
 
-    	unsigned count = 0;
-    	for (auto config : path ){
-//    		std::cout << "count is " << count << std::endl;
-    		if(count == 0){
-    			pathTree.addNode(config, NULL);
-    		}
-    		else
-    			pathTree.addNode(config, pathTree.getBack());
-    		count++;
-    	}
+    	NodeTree oldTree = pathTree;
 
     	// now iterate through and try shortcutting
 
-    	// for number of iterations
+    	if(path.size() > 2){
+			// for number of iterations
+			for(unsigned k = 0; k <= MAX_SMOOTHING_ITERS; k++){
+				// save the goal index
+				unsigned goalIndex = pathTree.getNumElems()-1;
 
-    		// save the goal index
+				// pick random pair
+				std::uniform_real_distribution<float> dist(0,goalIndex);
+				bool allSet = false;
+				unsigned pick1 = 0, pick2 = 0;
+				while(!allSet && !stop){
+					pick1 = dist(rng);
+					pick2 = dist(rng);
+					if(abs(pick1 - pick2) < 2)
+						break; // not far enough apart
+					allSet = true;
+				}
 
-    		// pick random pair
-    		// reject if parent-child pair
+				RRTNode* parent;
+				RRTNode* child;
+				parent = pathTree.getNode(pick1);
+				child = pathTree.getNode(pick2);
 
-    		// compute path length
+				// determine which is parent of what, switch if backward
+				if(!isParentOf(parent, child)){
+					RRTNode* temp = parent;
+					parent = child;
+					child = temp;
+				}
 
-    		// try extend connecting the two (go from parent (closest to start) to childest (closer to goal))
-    		// if not trapped,
-    			// compute path length
-    			// if less than original
-    				// make childest's new parent the last node in the connection extension
-    				// recompute path from goal index
-    				// construct new tree and start again
+				// compute path length
+				double pathLength = nodeDistance(parent, child);
 
+				// try extend connecting the two (go from parent (closest to start) to childest (closer to goal))
+				ExtendCodes code = connect(child->getConfiguration(), parent, &pathTree);
+
+				// if not trapped,
+				if(!code == ExtendCodes::Trapped){
+					// connect the child's parent to the last added node (since it was advancing that way)
+					child->setParent(pathTree.getBack());
+					// compute path length
+					double newPathLength = nodeDistance(parent, child);
+
+					// if less than original
+					if(newPathLength < pathLength){
+						// make childest's new parent the last node in the connection extension
+						// recompute path from goal index
+						// construct new tree and start again
+						std::vector<std::vector<double>> newPath = pathTree.getPath(goalIndex);
+
+						// erase the old path tree
+						pathTree.clear();
+
+						// write into path tree
+						writePathIntoTree(newPath, &pathTree);
+					}
+					else{
+						// restore the previous state of the tree
+						pathTree = oldTree;
+					}
+				}
+			}
+    	}
 
     	return pathTree.getPath(pathTree.getNumElems()-1);
 
     }
+
+    void writePathIntoTree(std::vector<std::vector<double>> path, NodeTree* tree){
+    	unsigned count = 0;
+    	for (auto config : path ){
+    		//    		std::cout << "count is " << count << std::endl;
+    		if(count == 0){
+    			tree->addNode(config, NULL);
+    		}
+    		else
+    			tree->addNode(config, tree->getBack());
+    		count++;
+    	}
+    }
+
+    // is node1 a parent of node2?
+    bool isParentOf(RRTNode* node1, RRTNode* node2){
+    	RRTNode* intermediateNode = node2->getParent();
+
+    	while((intermediateNode != node1 || intermediateNode != NULL) && !stop){
+    		if(intermediateNode->getParent() == NULL){
+    			return false; // node 2 is actually a parent of node 1 - we hit the starting position
+    		}
+    		intermediateNode = intermediateNode->getParent();
+    	}
+    	return true;
+    }
+
+    // finds path distance between child and parent nodes
+    double nodeDistance(RRTNode* parent, RRTNode* child){
+    	return pathDistance(getNodePath(parent, child));
+    }
+
+    double pathDistance(std::vector<std::vector<double>> path) {
+    	double sum = 0;
+    	unsigned count = 0;
+
+    	for (unsigned i = 1; i < path.size(); i++){
+    		sum += euclidDistance(path[i], path[i-1]);
+    		count++;
+    	}
+    	return sum/count;
+    }
+
     void parseArguments(std::istream& sinput){
     	std::string input;
     	sinput >> input;
@@ -341,7 +442,7 @@ public:
     	return GetEnv()->CheckCollision(robot) || robot->CheckSelfCollision();
     }
 
-    ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
+    ExtendCodes connect(std::vector<double> config, RRTNode* nearest, NodeTree* node_tree){
     	if (configsClose(config, nearest->getConfiguration())){
     		// "This node was too close to nearest - same thing"
     		return ExtendCodes::Trapped;
@@ -369,7 +470,7 @@ public:
     		// if not in a collision
     		if(!isColliding(&desiredConfig)){
     			// add this node to the tree, set parent to the new node
-    			parent = nodeTree.addNode(desiredConfig, parent);
+    			parent = node_tree->addNode(desiredConfig, parent);
 
     			// if this is the goal, yaay!
     			if(configsClose(goalConfiguration, desiredConfig)){
@@ -471,6 +572,10 @@ void NodeTree::deleteNode(unsigned index){
     _nodes.erase(_nodes.begin()+index);
 }
 
+void NodeTree::clear(){
+	_nodes.clear();
+}
+
 RRTNode* NodeTree::getNode(unsigned index){
     return _nodes[index];
 }
@@ -484,20 +589,23 @@ unsigned NodeTree::getNumElems(){
 }
 
 std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
+    return getPath(0,index);
+}
+
+// gets path between two specified indices
+std::vector<std::vector<double>> NodeTree::getPath(unsigned parentI, unsigned childI){
     std::vector<std::vector<double>> path;
-    RRTNode* currentNode = _nodes[index];
+    RRTNode* currentNode = _nodes[childI];
 
     path.push_back(currentNode->getConfiguration());
 
     unsigned count = 0;
 
-    while(currentNode->getParent() != NULL && !stop){
+    while((currentNode->getParent() != NULL || currentNode->getParent() == _nodes[parentI]) && !stop){
         currentNode = currentNode->getParent();
         path.push_back(currentNode->getConfiguration());
         count++;
     }
-
-    std::cout << "There were " << count << " nodes in the path" << std::endl;
 
     std::reverse(path.begin(), path.end());
 
