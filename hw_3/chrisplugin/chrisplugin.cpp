@@ -15,17 +15,20 @@ using namespace OpenRAVE;
 #include <unistd.h>
 #include <stdio.h>
 #include <signal.h>
+#include <csignal>
+#include <iostream>
 #include <chrono>
 
 #include "chrisplugin.hpp"
 
 #define STEP_SIZE 0.3
-#define GOAL_BIAS 0.11
+#define GOAL_BIAS 0.16
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
 
-void inthand(int signum) {
+void intHandler(int signum) {
+	std::cout << "I was told to stop" << std::endl;
     stop = 1;
 }
 
@@ -61,6 +64,7 @@ public:
                         "This is an example command");
         RegisterCommand("FindPath",boost::bind(&ChrisModule::FindPath,this,_1,_2),
                                 "This uses RRT to find a path to the given goal");
+        std::signal(SIGINT,intHandler);
     }
     virtual ~ChrisModule() {}
     
@@ -278,7 +282,7 @@ public:
 
     void getRandomConfig(std::vector<double>* config){
     	bool successful = false;
-    	while(!successful){
+    	while(!successful && !stop){
     		config->clear();
     		// for each joint, pick a random number between the limits
     		for (unsigned i = 0; i < dofLimLower.size(); i++){
@@ -444,7 +448,7 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
 
     unsigned count = 0;
 
-    while(currentNode->getParent() != NULL){
+    while(currentNode->getParent() != NULL && !stop){
         currentNode = currentNode->getParent();
         path.push_back(currentNode->getConfiguration());
         count++;
