@@ -63,7 +63,8 @@ std::vector<std::vector<double>> getNodePath(RRTNode* parent, RRTNode* child){
 class ChrisModule : public ModuleBase
 {
 private:
-    NodeTree _nodeTree;
+    NodeTree _nodeTreeGoal;
+    NodeTree _nodeTreeStart;
     std::vector<double> goalConfiguration;
     std::vector<double> dofWeights;
     std::vector<double> dofLimUpper;
@@ -73,6 +74,8 @@ private:
     GraphHandlePtr pgraphSmoothed;
 
     const double stepSize = STEP_SIZE;
+
+    bool doBiRRT = false;
 
     // http://stackoverflow.com/questions/14638739/generating-a-random-double-between-a-range-of-values
     //Mersenne Twister: Good quality random number generator
@@ -92,6 +95,7 @@ public:
     
     bool MyCommand(std::ostream& sout, std::istream& sinput)
     {
+    	doBiRRT = true;
         std::string input;
         sinput >> input;
         sout << "output";
@@ -130,7 +134,8 @@ public:
     	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     	// create first node and add it to the tree
-    	_nodeTree.addNode(startingConfig, NULL);
+    	_nodeTreeStart.addNode(startingConfig, NULL);
+    	_nodeTreeGoal.addNode(goalConfiguration, NULL);
 
     	// save joint limits
     	robot.get()->GetActiveDOFLimits(dofLimLower, dofLimUpper);
@@ -153,6 +158,9 @@ public:
     	bool foundGoal = false;
     	unsigned iterations = 0;
 
+    	NodeTree* Ta = &_nodeTreeStart;
+    	NodeTree* Tb = &_nodeTreeGoal;
+
     	while(!foundGoal && !stop){
     		EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex()); // lock environment
     		iterations++;
@@ -168,20 +176,26 @@ public:
     		}
 
     		// find nearest neighbor
-    		RRTNode* nearestNode = _nodeTree.nearestNeighbor(qRand, dofWeights);
+    		RRTNode* nearestNode = Ta->nearestNeighbor(qRand, dofWeights);
 
     		// connect - try to connect to tree
-    		ExtendCodes code = connect(qRand, nearestNode, &_nodeTree);
+    		ExtendCodes code = connect(qRand, nearestNode, Ta);
     		if(code != ExtendCodes::Trapped){
+    			if(doBiRRT) code = connect(Ta->getBack()->getConfiguration(), nearestNode, Tb);
     			if(code == ExtendCodes::Reached){
     				// return the path to the goal
     				std::cout << "WE REACHED THE GOAL" << std::endl;
     				foundGoal = true;
-    				_nodeTree.addNode(goalConfiguration, _nodeTree.getBack()); // just in case we have a small error
+    				if(!doBiRRT) Ta->addNode(goalConfiguration, Ta->getBack()); // just in case we have a small error
     				break;
     			}
     		}
     		// for bi-directional, this is where we switch which tree we grow
+    		if(doBiRRT){
+    			NodeTree* temp = Ta;
+    			Ta = Tb;
+    			Tb = temp;
+    		}
 
     	}
     	isColliding(&startingConfig);
@@ -192,13 +206,14 @@ public:
     	std::cout << "took " << iterations << " iterations to find the goal." << std::endl;
     	std::cout << "Step size was " << STEP_SIZE << " and goal bias was " << GOAL_BIAS << std::endl;
     	std::cout << "Time difference for search (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
-    	std::cout << "Number of nodes sampled: " << _nodeTree.getNumElems() << std::endl;
+    	std::cout << "Number of nodes sampled: " << Ta->getNumElems() << std::endl;
 
 
     	if(foundGoal){
 
     		// save path
-    		std::vector<std::vector<double>> path = _nodeTree.getPath(_nodeTree.getNumElems()-1); // the last element
+    		std::vector<std::vector<double>> path = getNodePath(_nodeTreeStart.getNode(0), _nodeTreeGoal.getNode(0)); // the last element
+    		if(!doBiRRT) std::vector<std::vector<double>> path = Ta->getPath(Ta->getNumElems()-1); // the last element
     		std::cout << "Unsmoothed joint path distance: " << pathDistance(path) << std::endl;
 
     		std::cout << "Smoothing the path out... " << std::endl;

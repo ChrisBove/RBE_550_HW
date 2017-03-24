@@ -66,8 +66,9 @@ if __name__ == "__main__":
         
         ### YOUR CODE HERE ###
         ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
-        # print ChrisModule.SendCommand('help')
-        # print ChrisModule.SendCommand('MyCommand TrulyTruly')
+
+        # uncomment next line for bi-directional
+        # print ChrisModule.SendCommand('MyCommand FTW')
 
         # activeWeights = robot.GetActiveDOFWeights()
         # These weights were taken from the class discussion board as both the Python and C++ API's returned
@@ -83,20 +84,6 @@ if __name__ == "__main__":
 
         # from http://stackoverflow.com/questions/307305/play-a-sound-with-python
         os.system("canberra-gtk-play --file=/usr/share/sounds/freedesktop/stereo/complete.oga")
-        
-        # print the computation time
-
-        # draw position of left end effector in red points
-
-        # convert path to trajectory, execute on Robot
-
-        # smooth the path, 200 iterations, use this to send to robot
-
-        # show the smoothed path in blue, record path length
-        # path smoothing - start with start node - iterate through the nodes, starting with
-        # the goal node, and try to directly extend to each one. If possible without striking obstacles,
-        # then make that reachable node's parent this node
-        # rebuild the path, and keep iterating
 
         ### END OF YOUR CODE ###
     waitrobot(robot)
