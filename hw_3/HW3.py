@@ -68,7 +68,7 @@ if __name__ == "__main__":
         ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
 
         # uncomment next line for bi-directional
-        # print ChrisModule.SendCommand('MyCommand FTW')
+        print ChrisModule.SendCommand('MyCommand FTW')
 
         # activeWeights = robot.GetActiveDOFWeights()
         # These weights were taken from the class discussion board as both the Python and C++ API's returned
@@ -88,5 +88,5 @@ if __name__ == "__main__":
         ### END OF YOUR CODE ###
     waitrobot(robot)
 
-    #raw_input("Press enter to exit...")
+    raw_input("Press enter to exit...")
     RaveDestroy()

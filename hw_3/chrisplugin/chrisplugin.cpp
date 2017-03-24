@@ -131,6 +131,9 @@ public:
     		return false;
     	}
 
+    	if(doBiRRT) std::cout << "We are doing bi-directional search!" << std::endl;
+    	else std::cout << "We are NOT doing bi-directional search!" << std::endl;
+
     	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     	// create first node and add it to the tree
@@ -181,12 +184,17 @@ public:
     		// connect - try to connect to tree
     		ExtendCodes code = connect(qRand, nearestNode, Ta);
     		if(code != ExtendCodes::Trapped){
-    			if(doBiRRT) code = connect(Ta->getBack()->getConfiguration(), nearestNode, Tb);
+    			nearestNode = Tb->nearestNeighbor(qRand, dofWeights);
+    			if(doBiRRT) code = connect(qRand, nearestNode, Tb);
     			if(code == ExtendCodes::Reached){
     				// return the path to the goal
     				std::cout << "WE REACHED THE GOAL" << std::endl;
     				foundGoal = true;
     				if(!doBiRRT) Ta->addNode(goalConfiguration, Ta->getBack()); // just in case we have a small error
+    				if(doBiRRT){
+    					// need to recreate tree strutcutre - it is bi-directional now
+//    					Tb->addNode(qRand, Ta->getBack());
+    				}
     				break;
     			}
     		}
@@ -212,8 +220,14 @@ public:
     	if(foundGoal){
 
     		// save path
-    		std::vector<std::vector<double>> path = getNodePath(_nodeTreeStart.getNode(0), _nodeTreeGoal.getNode(0)); // the last element
-    		if(!doBiRRT) std::vector<std::vector<double>> path = Ta->getPath(Ta->getNumElems()-1); // the last element
+    		std::vector<std::vector<double>> path;
+    		if(doBiRRT) {
+    			path = _nodeTreeStart.getPath(_nodeTreeStart.getNumElems()-1);
+    			std::vector<std::vector<double>> pathFromEnd = _nodeTreeGoal.getReversedPath(0,_nodeTreeGoal.getNumElems()-1);
+//    			path = getNodePath(_nodeTreeStart.getNode(0), _nodeTreeGoal.getNode(0)); // the last element
+    			path.insert( path.end(), pathFromEnd.begin(), pathFromEnd.end() );
+    		}
+    		if(!doBiRRT) path = Ta->getPath(Ta->getNumElems()-1); // the last element
     		std::cout << "Unsmoothed joint path distance: " << pathDistance(path) << std::endl;
 
     		std::cout << "Smoothing the path out... " << std::endl;
@@ -554,6 +568,9 @@ public:
     			// add this node to the tree, set parent to the new node
     			parent = node_tree->addNode(desiredConfig, parent);
 
+    			if(doBiRRT && configsClose(config, desiredConfig)){
+    				return ExtendCodes::Reached;
+    			}
     			// if this is the goal, yaay!
     			if(configsClose(goalConfiguration, desiredConfig)){
     				return ExtendCodes::Reached;
@@ -672,6 +689,24 @@ unsigned NodeTree::getNumElems(){
 
 std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
     return getPath(0,index);
+}
+
+// gets path between two specified indices
+std::vector<std::vector<double>> NodeTree::getReversedPath(unsigned parentI, unsigned childI){
+    std::vector<std::vector<double>> path;
+    RRTNode* currentNode = _nodes[childI];
+
+    path.push_back(currentNode->getConfiguration());
+
+    unsigned count = 0;
+
+    while((currentNode->getParent() != NULL || currentNode->getParent() == _nodes[parentI]) && !stop){
+        currentNode = currentNode->getParent();
+        path.push_back(currentNode->getConfiguration());
+        count++;
+    }
+
+    return path;
 }
 
 // gets path between two specified indices

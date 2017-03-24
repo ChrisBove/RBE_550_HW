@@ -33,6 +33,7 @@ public:
 	RRTNode* getBack();
 	std::vector<std::vector<double>> getPath(unsigned index);
 	std::vector<std::vector<double>> getPath(unsigned parentI, unsigned childI);
+	std::vector<std::vector<double>> getReversedPath(unsigned parentI, unsigned childI);
 
 	unsigned getNumElems();
 
