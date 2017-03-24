@@ -5,7 +5,7 @@ import time
 import openravepy
 
 #### YOUR IMPORTS GO HERE ####
-
+import os
 #### END OF YOUR IMPORTS ####
 
 if not __openravepy_build_doc__:
@@ -80,6 +80,10 @@ if __name__ == "__main__":
         string = ''.join(['FindPath ', trimmedSettings])
         # print string
         path = ChrisModule.SendCommand(string)
+
+        # from http://stackoverflow.com/questions/307305/play-a-sound-with-python
+        os.system("canberra-gtk-play --file=/usr/share/sounds/freedesktop/stereo/complete.oga")
+        
         # print the computation time
 
         # draw position of left end effector in red points
