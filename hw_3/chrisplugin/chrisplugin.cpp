@@ -22,7 +22,8 @@ using namespace OpenRAVE;
 #include "chrisplugin.hpp"
 
 #define STEP_SIZE 0.3
-#define GOAL_BIAS 0.16
+#define GOAL_BIAS 0.11
+#define MAX_SMOOTHING_ITERS 200
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -167,13 +168,17 @@ public:
     	// from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
     	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    	std::cout << "took " << iterations << " iterations to find the goal" << std::endl;
+    	std::cout << "took " << iterations << " iterations to find the goal." << std::endl;
+    	std::cout << "Step size was " << STEP_SIZE << " and goal bias was " << GOAL_BIAS << std::endl;
     	std::cout << "Time difference (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
 
     	if(foundGoal){
 
     		// save path
     		std::vector<std::vector<double>> path = nodeTree.getPath(nodeTree.getNumElems()-1); // the last element
+
+    		std::vector<std::vector<double>> smoothedPath = smoothPath(path); // smoothing
+
 
     		robot->SetActiveManipulator(0);
     		auto manip = robot->GetActiveManipulator();
@@ -220,6 +225,44 @@ public:
     	return true;
     }
 
+    std::vector<std::vector<double>> smoothPath(std::vector<std::vector<double>> path){
+    	// create new node tree
+    	NodeTree pathTree;
+
+    	unsigned count = 0;
+    	for (auto config : path ){
+//    		std::cout << "count is " << count << std::endl;
+    		if(count == 0){
+    			pathTree.addNode(config, NULL);
+    		}
+    		else
+    			pathTree.addNode(config, pathTree.getBack());
+    		count++;
+    	}
+
+    	// now iterate through and try shortcutting
+
+    	// for number of iterations
+
+    		// save the goal index
+
+    		// pick random pair
+    		// reject if parent-child pair
+
+    		// compute path length
+
+    		// try extend connecting the two (go from parent (closest to start) to childest (closer to goal))
+    		// if not trapped,
+    			// compute path length
+    			// if less than original
+    				// make childest's new parent the last node in the connection extension
+    				// recompute path from goal index
+    				// construct new tree and start again
+
+
+    	return pathTree.getPath(pathTree.getNumElems()-1);
+
+    }
     void parseArguments(std::istream& sinput){
     	std::string input;
     	sinput >> input;
