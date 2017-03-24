@@ -23,7 +23,7 @@ using namespace OpenRAVE;
 
 #define STEP_SIZE 0.3
 #define GOAL_BIAS 0.11
-#define MAX_SMOOTHING_ITERS 200
+#define MAX_SMOOTHING_ITERS 10000
 
 // from http://stackoverflow.com/questions/26965508/infinite-while-loop-and-control-c
 volatile sig_atomic_t stop;
@@ -287,14 +287,14 @@ public:
 					allSet = true;
 				}
 
-				std::cout << "Came up with pick1: " << pick1 << " and pick2: " << pick2 << " with a goal index of " << goalIndex << " and size of " << pathTree.getNumElems() << std::endl;
+//				std::cout << "Came up with pick1: " << pick1 << " and pick2: " << pick2 << " with a goal index of " << goalIndex << " and size of " << pathTree.getNumElems() << std::endl;
 
 				RRTNode* parent;
 				RRTNode* child;
 				parent = pathTree.getNode(pick1);
 				child = pathTree.getNode(pick2);
 
-				std::cout << "got nodes from pick indices" << std::endl;
+//				std::cout << "got nodes from pick indices" << std::endl;
 
 				// determine which is parent of what, switch if backward
 				if(!isChildOf(child, parent)){
@@ -303,12 +303,12 @@ public:
 					child = temp;
 				}
 
-				std::cout << "Switched around nodes. " << std::endl;
+//				std::cout << "Switched around nodes. " << std::endl;
 
 				// compute path length
 				double pathLength = nodeDistance(parent, child);
 
-				std::cout << "computed path length: " << pathLength << std::endl;
+//				std::cout << "computed path length: " << pathLength << std::endl;
 
 				// try extend connecting the two (go from parent (closest to start) to childest (closer to goal))
 				ExtendCodes code = connect(child->getConfiguration(), parent, &pathTree);
@@ -320,10 +320,11 @@ public:
 					child->setParent(pathTree.getBack());
 					// compute path length
 					double newPathLength = nodeDistance(parent, child);
-					std::cout << "new path length " << newPathLength << std::endl;
+//					std::cout << "new path length " << newPathLength << "old path length: " << pathLength << std::endl;
 
 					// if less than original
 					if(newPathLength < pathLength){
+						std::cout << "found new path length " << newPathLength << " better than " << pathLength << std::endl;
 						// make childest's new parent the last node in the connection extension
 						// recompute path from goal index
 						// construct new tree and start again
@@ -403,8 +404,8 @@ public:
     	double count = 0;
 
     	for (unsigned i = 1; i < path.size(); i++){
-    		sum += euclidDistance(path[i], path[i-1]);
-    		std::cout << "distance sum is " << sum << "and count is " << count << std::endl;
+    		sum += weightedEuclidDistance(path[i], path[i-1], dofWeights);
+//    		std::cout << "distance sum is " << sum << "and count is " << count << std::endl;
     		count++;
     	}
     	return sum/count;
