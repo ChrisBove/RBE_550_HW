@@ -184,6 +184,7 @@ public:
 
     		unsigned count = 0;
     		for (auto config : path){
+    			printConfig(config);
     			if (count == 0){
     				ptraj->Init(cSpaceSpec);
     			}
@@ -405,7 +406,7 @@ public:
     }
 
     bool configsClose(std::vector<double> config1, std::vector<double> config2){
-    	if(euclidDistance(config1, config2) < STEP_SIZE)
+    	if(weightedEuclidDistance(config1, config2, dofWeights) < 2*STEP_SIZE)
     		return true;
     	return false;
 //    	for (unsigned i = 0; i < config1.size(); i++){
