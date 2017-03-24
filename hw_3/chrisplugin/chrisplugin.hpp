@@ -21,19 +21,6 @@ private:
 	RRTNode* _parent;
 };
 
-class HeapableRRTNode{
-public:
-	HeapableRRTNode(RRTNode* node, double cost);
-	double getCost();
-	RRTNode* getRRTNode();
-	double _cost;
-private:
-	RRTNode* _node;
-
-};
-
-// make a struct for doing compares
-
 class NodeTree
 {
 public:

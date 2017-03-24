@@ -140,20 +140,9 @@ public:
     			// sample randomly from c-space
     			getRandomConfig(&qRand);
     		}
-//    		std::cout << std::endl << "a random joint value: " << std::endl;
-//    		for (auto i = qRand.begin(); i != qRand.end(); ++i){
-//    			std::cout << *i << ' ';
-//    		}
-//    		std::cout << std::endl << std::endl;
 
     		// find nearest neighbor
     		RRTNode* nearestNode = nodeTree.nearestNeighbor(qRand, dofWeights);
-
-//    		std::cout << std::endl << "nearest neighbor joint value: " << std::endl;
-//    		for (auto i = nearestNode->getConfiguration().begin(); i != nearestNode->getConfiguration().end(); ++i){
-//    			std::cout << *i << ' ';
-//    		}
-//    		std::cout << std::endl << std::endl;
 
     		// connect - try to connect to tree
     		ExtendCodes code = connect(qRand, nearestNode);
@@ -210,69 +199,13 @@ public:
     		std::cout << "Drawing path of eef." << std::endl;
 
     		pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),2.0f, RaveVector<float>(1,0,0,1));
+    		pgraph = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),5.0f, RaveVector<float>(1,0,0,1));
 
     		planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, 0.5, 0.5, "LinearTrajectoryRetimer", "");
-//    		        openravepy.planningutils.RetimeActiveDOFTrajectory(traj, robot, False, 0.5, 0.5, "LinearTrajectoryRetimer", "")
-//
-//    		        robot.GetController().SetPath(traj)
-//    		        print('Trajectory sent to robot. Waiting for robot to move.')
-
-    		// draw the end effector of the trajectory
-//    		{
-//    			//RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
-//    			std::vector<RaveVector<float> > vpoints;
-//    			std::vector<dReal> vtrajdata;
-//    			for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
-//    				ptraj->Sample(vtrajdata,ftime,robot->GetActiveConfigurationSpecification());
-//    				robot->SetActiveDOFValues(vtrajdata);
-//    				vpoints.push_back(manip->GetEndEffectorTransform().trans);
-//    			}
-//    			pgraph = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
-//    		}
 
     		// send the trajectory to the robot
     		robot->GetController()->SetPath(ptraj);
 
-    		// display eef position as red points in environment
-//    		for (auto config : path){
-//    			robot.get()->SetActiveDOFValues(config);
-//    			auto eef = manip.get()->GetEndEffectorTransform().trans;
-////    			GetEnv()->plot3(eef.trans, 10);
-//    			GetEnv()->plot3(&eef, 1, sizeof(eef), 1.0f);
-    			//pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
-//    			GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
-
-//    			with robot: # lock environment and save robot state
-//    			    robot.SetDOFValues([2.58, 0.547, 1.5, -0.7],[0,1,2,3]) # set the first 4 dof values
-//    			    Tee = manip.GetEndEffectorTransform() # get end effector
-//    			    ikparam = IkParameterization(Tee[0:3,3],ikmodel.iktype) # build up the translation3d ik query
-//    			    sols = manip.FindIKSolutions(ikparam, IkFilterOptions.CheckEnvCollisions) # get all solutions
-//
-//    			h = env.plot3(Tee[0:3,3],10) # plot one point
-
-    			// create a new output trajectory
-//    			TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
-//    			if( !planner->PlanPath(ptraj) ) {
-//    				RAVELOG_WARN("plan failed, trying again\n");
-//    				continue;
-//    			}
-//
-//    			// draw the end effector of the trajectory
-//    			{
-//    				RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
-//    				vector<RaveVector<float> > vpoints;
-//    				vector<dReal> vtrajdata;
-//    				for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
-//    					ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
-//    					probot->SetActiveDOFValues(vtrajdata);
-//    					vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
-//    				}
-//    				pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
-//    			}
-//
-//    			// send the trajectory to the robot
-//    			probot->GetController()->SetPath(ptraj);
-//    		}
     		// smooth the path
 
     		// execute the robot trajectory
@@ -290,12 +223,9 @@ public:
 
     	std::vector<std::string> arrays;
     	boost::split(arrays, input, boost::is_any_of("[]"), boost::token_compress_on);
-//		std::cout << "And I parsed these arrays:" << std::endl;
 
     	unsigned arrayCount = 0;
     	for (auto array : arrays){
-//    		std::cout << "size: " << array.size() << " values: ";
-//    		std::cout << array << std::endl;
     		if(array.size() != 0){
     			if (arrayCount == 0){
     				goalConfiguration = printedArrayToVector(array);
@@ -327,7 +257,6 @@ public:
     	std::vector<std::string> words;
     	boost::split(words, input, boost::is_any_of(", []"), boost::token_compress_on);
     	for (auto i = words.begin(); i != words.end(); ++i){
-//    	    std::cout << *i << ' ';
     	    nums.emplace_back(std::stod(*i));
     	}
     	return nums;
@@ -367,7 +296,7 @@ public:
 
     ExtendCodes connect(std::vector<double> config, RRTNode* nearest){
     	if (configsClose(config, nearest->getConfiguration())){
-//    		std::cout << "This node was too close to nearest - same thing" << std::endl;
+    		// "This node was too close to nearest - same thing"
     		return ExtendCodes::Trapped;
     	}
     	// try to step towards the configuration, avoiding collisions
@@ -405,7 +334,6 @@ public:
     			}
     		}
     		else{
-//    			std::cout << "new config collided - trapped" << std::endl;
     			// we're done here - we are trapped
     			done = true;
     		}
@@ -430,7 +358,6 @@ public:
 //    		if(std::abs(config1[i] - config2[i]) > 0.01)
 //    			return false;
 //    	}
-//    	return true;
     }
 
 };
@@ -488,8 +415,6 @@ void NodeTree::addNode(RRTNode* node){
 }
 
 RRTNode* NodeTree::addNode(std::vector<double> configuration, RRTNode* parent){
-//	std::vector<float> config = configuration;
-//	RRTNode* par = parent;
 	_nodes.push_back(new RRTNode(configuration, parent));
 //    _nodes.emplace_back(config, par); // faster, allocates in place
 	return _nodes.back();
@@ -515,16 +440,12 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
     std::vector<std::vector<double>> path;
     RRTNode* currentNode = _nodes[index];
 
-//    std::cout << "I see " << _nodes.size() << " nodes in my tree. Looking for index " << index << std::endl;
-//    printConfig(currentNode->getConfiguration());
-
     path.push_back(currentNode->getConfiguration());
 
     unsigned count = 0;
 
     while(currentNode->getParent() != NULL){
         currentNode = currentNode->getParent();
-//        printConfig(currentNode->getConfiguration());
         path.push_back(currentNode->getConfiguration());
         count++;
     }
@@ -536,51 +457,21 @@ std::vector<std::vector<double>> NodeTree::getPath(unsigned index){
     return path;
 }
 
-HeapableRRTNode::HeapableRRTNode(RRTNode* node, double cost){
-	_cost = cost;
-	_node = node;
-}
-
-double HeapableRRTNode::getCost(){
-	return _cost;
-}
-
-RRTNode* HeapableRRTNode::getRRTNode(){
-	return _node;
-}
-
-// from http://stackoverflow.com/questions/14016921/comparator-for-min-heap-in-c
-struct costComparitor{
-  bool operator()(const HeapableRRTNode& a,const HeapableRRTNode& b) const{
-    return a._cost > b._cost;
-  }
-};
-
 //naive method - search all nodes for closest weighted neighbor
 RRTNode* NodeTree::nearestNeighbor(std::vector<double> configuration, std::vector<double> weights){
-    std::vector<HeapableRRTNode> neighbors;
-    neighbors.reserve(_nodes.size()); // preallocate number of elements
-
     // compute distances from this configuration to the neighbors we have
     unsigned count = 0;
     double lowestDistance = weightedEuclidDistance(_nodes.front()->getConfiguration(),configuration,weights);
     RRTNode* closestNode = _nodes.front();
     for (RRTNode* node : _nodes){
     	double dist = weightedEuclidDistance(node->getConfiguration(),configuration,weights);
-//    	std::cout << "Dist: " << dist << std::endl;
     	// only add nodes that have a chance of being lower
     	if (dist < lowestDistance){
-//    		neighbors.emplace_back(node, dist);
     		lowestDistance = dist;
     		closestNode = node;
     	}
     	count++;
     }
-//    std::cout << "Counted " << count << " neighbors." << std::endl;
-//    // heap them so that the shortest is at the top
-//    std::make_heap(neighbors.begin(), neighbors.end(), costComparitor());
-    // pick the one at the top
-//    return neighbors.front().getRRTNode();
     return closestNode;
 }
 
