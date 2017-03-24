@@ -199,12 +199,13 @@ public:
 
     		// save path
     		std::vector<std::vector<double>> path = _nodeTree.getPath(_nodeTree.getNumElems()-1); // the last element
-    		std::cout << "Unsmoothed joint path distance" << pathDistance(path) << std::endl;
+    		std::cout << "Unsmoothed joint path distance: " << pathDistance(path) << std::endl;
 
     		std::cout << "Smoothing the path out... " << std::endl;
     		begin = std::chrono::steady_clock::now();
     		std::vector<std::vector<double>> smoothedPath = smoothPath(path); // smoothing
-    		std::cout << "Smoothed joint path distance" << pathDistance(smoothedPath) << std::endl;
+    		end = std::chrono::steady_clock::now();
+    		std::cout << "Smoothed joint path distance: " << pathDistance(smoothedPath) << std::endl;
         	std::cout << "Time difference for smoothing (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) /1000000.0 <<std::endl;
 
 
